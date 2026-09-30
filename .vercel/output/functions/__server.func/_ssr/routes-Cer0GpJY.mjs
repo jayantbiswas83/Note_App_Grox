@@ -1,7 +1,7 @@
 import { i as __toESM } from "../_runtime.mjs";
 import { u as require_react } from "../_libs/@floating-ui/react-dom+[...].mjs";
 import { O as require_jsx_runtime, T as Slot, a as Overlay2, c as Title2, d as DialogContent$1, f as DialogDescription$1, h as DialogTitle$1, i as Description2, l as Dialog$1, m as DialogPortal$1, n as Cancel, o as Portal2, p as DialogOverlay$1, r as Content2, s as Root2, t as Action, u as DialogClose } from "../_libs/@radix-ui/react-alert-dialog+[...].mjs";
-import { a as Plus, c as Keyboard, i as Search, l as FileText, o as PenLine, r as Trash2, s as Menu, t as X, u as Eye } from "../_libs/lucide-react.mjs";
+import { a as Star, c as Plus, d as PanelLeftClose, f as Menu, g as Eye, h as FileText, i as Tag, l as PenLine, m as Hash, o as Settings, p as Keyboard, r as Trash2, s as Search, t as X, u as PanelLeftOpen } from "../_libs/lucide-react.mjs";
 import { n as format, t as formatDistanceToNow } from "../_libs/date-fns.mjs";
 import { n as clsx, t as cva } from "../_libs/class-variance-authority+clsx.mjs";
 import { t as twMerge } from "../_libs/tailwind-merge.mjs";
@@ -10,7 +10,7 @@ import { a as Trigger, i as Root3, n as Portal, r as Provider, t as Content2$1 }
 import { t as Markdown } from "../_libs/react-markdown+[...].mjs";
 import { t as remarkGfm } from "../_libs/remark-gfm.mjs";
 import { t as rehypeSanitize } from "../_libs/rehype-sanitize.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-CfGQq6-R.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-Cer0GpJY.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function cn(...inputs) {
@@ -128,6 +128,17 @@ Keep your hands on the keyboard.
 
 On a phone, open the sidebar from the menu and swipe through your notes as usual.
 `;
+var SEED_IDEAS = `# Ideas
+
+Things to explore when there is time.
+
+- A walking route through the old part of town
+- Read *The Peregrine* again
+- Try sourdough with a colder proof
+- Write a letter to someone I owe one
+
+Tagged with \`personal\` and \`ideas\` so they are easy to find later.
+`;
 function noteTitle(body) {
 	const cleaned = (body.split(/\r?\n/).find((entry) => entry.trim().length > 0) ?? "").replace(/^#{1,6}\s+/, "").replace(/^[-*+]\s+/, "").replace(/^[0-9]+\.\s+/, "").replace(/[*_`]/g, "").trim();
 	return cleaned.length > 0 ? cleaned : "Untitled";
@@ -147,20 +158,34 @@ function createSeedNotes(now) {
 		{
 			id: "seed-welcome",
 			body: SEED_WELCOME,
+			favorite: true,
+			tags: [],
 			createdAt: now - 936e5,
 			updatedAt: now - 72e4
 		},
 		{
 			id: "seed-markdown",
 			body: SEED_MARKDOWN,
+			favorite: false,
+			tags: ["reference"],
 			createdAt: now - 108e6,
 			updatedAt: now - 3e6
 		},
 		{
 			id: "seed-shortcuts",
 			body: SEED_SHORTCUTS,
+			favorite: false,
+			tags: ["reference"],
 			createdAt: now - 1728e5,
 			updatedAt: now - 48e5
+		},
+		{
+			id: "seed-ideas",
+			body: SEED_IDEAS,
+			favorite: true,
+			tags: ["personal", "ideas"],
+			createdAt: now - 432e5,
+			updatedAt: now - 3e5
 		}
 	];
 }
@@ -175,17 +200,27 @@ function filterNotes(notes, query) {
 		return noteTitle(note.body).toLowerCase().includes(q) || note.body.toLowerCase().includes(q);
 	});
 }
+function collectTags(notes) {
+	const counts = /* @__PURE__ */ new Map();
+	for (const note of notes) for (const tag of note.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+	return counts;
+}
 var useNotesStore = create()(persist((set, get) => ({
 	notes: [],
 	selectedId: null,
 	search: "",
 	previewMode: false,
+	sidebarCollapsed: false,
+	activeView: "notes",
+	activeTag: null,
 	hasHydrated: false,
 	createNote: () => {
 		const now = Date.now();
 		const note = {
 			id: crypto.randomUUID(),
 			body: "",
+			favorite: false,
+			tags: get().activeView === "tags" && get().activeTag ? [get().activeTag] : [],
 			createdAt: now,
 			updatedAt: now
 		};
@@ -232,6 +267,26 @@ var useNotesStore = create()(persist((set, get) => ({
 	setSearch: (search) => set({ search }),
 	togglePreview: () => set((state) => ({ previewMode: !state.previewMode })),
 	setPreviewMode: (previewMode) => set({ previewMode }),
+	toggleFavorite: (id) => {
+		set((state) => ({ notes: state.notes.map((note) => note.id === id ? {
+			...note,
+			favorite: !note.favorite,
+			updatedAt: Date.now()
+		} : note) }));
+	},
+	setNoteTags: (id, tags) => {
+		set((state) => ({ notes: state.notes.map((note) => note.id === id ? {
+			...note,
+			tags,
+			updatedAt: Date.now()
+		} : note) }));
+	},
+	setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
+	setActiveView: (view) => set({
+		activeView: view,
+		activeTag: view === "tags" ? get().activeTag : null
+	}),
+	setActiveTag: (tag) => set({ activeTag: tag }),
 	loadSeed: () => {
 		if (get().notes.length > 0) return;
 		const notes = createSeedNotes(Date.now());
@@ -247,9 +302,34 @@ var useNotesStore = create()(persist((set, get) => ({
 	partialize: (state) => ({
 		notes: state.notes,
 		selectedId: state.selectedId,
-		previewMode: state.previewMode
+		previewMode: state.previewMode,
+		sidebarCollapsed: state.sidebarCollapsed,
+		activeView: state.activeView,
+		activeTag: state.activeTag
 	})
 }));
+var NAV_ITEMS = [
+	{
+		id: "notes",
+		label: "Notes",
+		icon: FileText
+	},
+	{
+		id: "favorites",
+		label: "Favorites",
+		icon: Star
+	},
+	{
+		id: "tags",
+		label: "Tags",
+		icon: Tag
+	},
+	{
+		id: "settings",
+		label: "Settings",
+		icon: Settings
+	}
+];
 function NoteSidebar({ searchRef, editorRef, onNavigate, modifier }) {
 	const notes = useNotesStore((state) => state.notes);
 	const selectedId = useNotesStore((state) => state.selectedId);
@@ -258,7 +338,13 @@ function NoteSidebar({ searchRef, editorRef, onNavigate, modifier }) {
 	const selectNote = useNotesStore((state) => state.selectNote);
 	const createNote = useNotesStore((state) => state.createNote);
 	const hasHydrated = useNotesStore((state) => state.hasHydrated);
-	const visible = filterNotes(notes, search);
+	const collapsed = useNotesStore((state) => state.sidebarCollapsed);
+	const setCollapsed = useNotesStore((state) => state.setSidebarCollapsed);
+	const activeView = useNotesStore((state) => state.activeView);
+	const setActiveView = useNotesStore((state) => state.setActiveView);
+	const activeTag = useNotesStore((state) => state.activeTag);
+	const setActiveTag = useNotesStore((state) => state.setActiveTag);
+	const toggleFavorite = useNotesStore((state) => state.toggleFavorite);
 	function handleCreate() {
 		createNote();
 		onNavigate?.();
@@ -268,13 +354,24 @@ function NoteSidebar({ searchRef, editorRef, onNavigate, modifier }) {
 		selectNote(id);
 		onNavigate?.();
 	}
+	function handleNavClick(view) {
+		setActiveView(view);
+		if (view !== "tags") setActiveTag(null);
+	}
+	const tagCounts = collectTags(notes);
+	const sortedTagNames = [...tagCounts.keys()].sort((a, b) => a.localeCompare(b));
+	let visible = [];
+	if (activeView === "favorites") visible = filterNotes(sortedNotes(notes).filter((n) => n.favorite), search);
+	else if (activeView === "tags" && activeTag) visible = filterNotes(sortedNotes(notes).filter((n) => n.tags.includes(activeTag)), search);
+	else visible = filterNotes(notes, search);
+	const favoriteCount = notes.filter((n) => n.favorite).length;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "flex h-full min-h-0 flex-col bg-sidebar",
+		className: cn("flex h-full min-h-0 flex-col bg-sidebar transition-[width] duration-300 ease-smooth", collapsed ? "w-16" : "w-full"),
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "flex items-start justify-between gap-3 px-4 pt-5 pb-4",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "min-w-0",
+				className: "flex items-start justify-between gap-2 px-3 pt-4 pb-3",
+				children: [!collapsed && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "min-w-0 flex-1",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 						className: "font-serif text-2xl leading-none font-medium tracking-tight italic",
 						children: "Folio"
@@ -285,14 +382,68 @@ function NoteSidebar({ searchRef, editorRef, onNavigate, modifier }) {
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
 					type: "button",
 					size: "icon-sm",
-					variant: "default",
-					"aria-label": "New note",
-					onClick: handleCreate,
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Plus, {})
+					variant: "ghost",
+					"aria-label": collapsed ? "Expand sidebar" : "Collapse sidebar",
+					onClick: () => setCollapsed(!collapsed),
+					className: cn("shrink-0 text-muted-foreground", collapsed && "mx-auto"),
+					children: collapsed ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PanelLeftOpen, {}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PanelLeftClose, {})
 				})]
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "px-3 pb-3",
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("nav", {
+				className: "px-2 pb-2",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+					className: "flex flex-col gap-0.5",
+					children: NAV_ITEMS.map((item) => {
+						const Icon = item.icon;
+						const active = activeView === item.id;
+						const count = item.id === "notes" ? notes.length : item.id === "favorites" ? favoriteCount : item.id === "tags" ? sortedTagNames.length : void 0;
+						return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+							type: "button",
+							onClick: () => handleNavClick(item.id),
+							"aria-current": active ? "true" : void 0,
+							title: collapsed ? item.label : void 0,
+							className: cn("group flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors duration-150", collapsed && "justify-center px-0", active ? "bg-card text-foreground shadow-soft" : "text-muted-foreground hover:bg-card/60 hover:text-foreground"),
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Icon, { className: "size-4 shrink-0" }), !collapsed && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "flex-1 text-left font-medium",
+								children: item.label
+							}), count !== void 0 && count > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "text-xs tabular-nums text-muted-foreground",
+								children: count
+							})] })]
+						}) }, item.id);
+					})
+				})
+			}),
+			activeView === "tags" && !collapsed && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "px-3 pb-2",
+				children: sortedTagNames.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "px-1 py-3 text-sm text-muted-foreground",
+					children: "No tags yet. Add tags to a note from its toolbar."
+				}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+					className: "flex flex-col gap-0.5",
+					children: sortedTagNames.map((tag) => {
+						const active = activeTag === tag;
+						return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+							type: "button",
+							onClick: () => setActiveTag(active ? null : tag),
+							className: cn("flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors duration-150", active ? "bg-card text-foreground shadow-soft" : "text-muted-foreground hover:bg-card/60 hover:text-foreground"),
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Hash, { className: "size-3.5 shrink-0" }),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "flex-1 text-left",
+									children: tag
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "text-xs tabular-nums text-muted-foreground",
+									children: tagCounts.get(tag)
+								})
+							]
+						}) }, tag);
+					})
+				})
+			}),
+			activeView !== "settings" && !collapsed && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "px-3 pb-3 pt-1",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
 					className: "relative block",
 					children: [
@@ -319,65 +470,127 @@ function NoteSidebar({ searchRef, editorRef, onNavigate, modifier }) {
 						})
 					]
 				})
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "px-3 pb-2",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Button, {
+					type: "button",
+					variant: "default",
+					className: "h-10 w-full justify-start gap-2",
+					onClick: handleCreate,
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Plus, { className: "size-4" }), "New note"]
+				})
+			})] }),
+			activeView === "settings" && !collapsed ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SettingsPanel, {}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 				className: "min-h-0 flex-1 overflow-y-auto",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 					className: "flex flex-col gap-0.5 px-2 pb-4",
-					children: !hasHydrated ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarSkeleton, {}) : visible.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(EmptyList, {
+					children: !hasHydrated ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarSkeleton, {}) : activeView === "tags" && !activeTag ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TagHint, {}) : visible.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(EmptyList, {
 						hasNotes: notes.length > 0,
-						query: search
+						query: search,
+						view: activeView
 					}) : visible.map((note) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NoteRow, {
 						note,
 						selected: note.id === selectedId,
-						onSelect: handleSelect
+						onSelect: handleSelect,
+						onToggleFavorite: toggleFavorite,
+						collapsed
 					}, note.id))
 				})
+			}), !collapsed && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "px-4 py-3 text-xs text-muted-foreground",
+				children: hasHydrated ? search.trim() ? `${visible.length} match${visible.length === 1 ? "" : "es"}` : `${visible.length} note${visible.length === 1 ? "" : "s"}` : "Opening notes"
+			})] })
+		]
+	});
+}
+function NoteRow({ note, selected, onSelect, onToggleFavorite, collapsed }) {
+	const title = noteTitle(note.body);
+	const preview = notePreview(note.body);
+	const stamp = formatDistanceToNow(note.updatedAt, { addSuffix: true });
+	if (collapsed) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+		type: "button",
+		onClick: () => onSelect(note.id),
+		"aria-label": title,
+		"aria-current": selected ? "true" : void 0,
+		className: cn("flex size-10 items-center justify-center rounded-md text-sm transition-colors duration-150", selected ? "bg-card text-foreground shadow-soft" : "text-muted-foreground hover:bg-card/60 hover:text-foreground"),
+		children: note.favorite ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Star, { className: "size-4 text-accent fill-accent" }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FileText, { className: "size-4" })
+	});
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: cn("group relative rounded-md border-l-2 transition-colors duration-150", selected ? "border-accent bg-card text-foreground" : "border-transparent text-foreground hover:bg-card/70"),
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+			type: "button",
+			onClick: () => onSelect(note.id),
+			"aria-current": selected ? "true" : void 0,
+			className: "w-full px-3 py-3 text-left min-h-11",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex items-center gap-1.5",
+					children: [note.favorite && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Star, { className: "size-3.5 shrink-0 text-accent fill-accent" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "truncate font-serif text-base font-medium tracking-tight",
+						children: title
+					})]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-1 flex items-baseline justify-between gap-3",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "truncate text-xs text-muted-foreground",
+						children: preview
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("time", {
+						dateTime: new Date(note.updatedAt).toISOString(),
+						className: "shrink-0 text-xs text-muted-foreground tabular-nums",
+						children: stamp
+					})]
+				}),
+				note.tags.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-1.5 flex flex-wrap gap-1",
+					children: note.tags.map((tag) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+						className: "inline-flex items-center gap-0.5 rounded-sm bg-muted px-1.5 py-0.5 text-[0.625rem] text-muted-foreground",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Hash, { className: "size-2.5" }), tag]
+					}, tag))
+				})
+			]
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+			type: "button",
+			onClick: (e) => {
+				e.stopPropagation();
+				onToggleFavorite(note.id);
+			},
+			"aria-label": note.favorite ? "Remove from favorites" : "Add to favorites",
+			className: cn("absolute top-2.5 right-2 size-7 rounded-md opacity-0 transition-opacity duration-150 hover:bg-muted group-hover:opacity-100", note.favorite && "opacity-100"),
+			children: note.favorite ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Star, { className: "size-3.5 text-accent fill-accent" }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Star, { className: "size-3.5 text-muted-foreground" })
+		})]
+	});
+}
+function TagHint() {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "flex flex-col items-center gap-2 px-4 py-12 text-center",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Tag, { className: "size-6 text-muted-foreground" }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "font-serif text-base",
+				children: "Select a tag"
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "px-4 py-3 text-xs text-muted-foreground",
-				children: hasHydrated ? search.trim() ? `${visible.length} match${visible.length === 1 ? "" : "es"}` : `${notes.length} note${notes.length === 1 ? "" : "s"}` : "Opening notes"
+				className: "text-sm text-muted-foreground",
+				children: "Choose a tag above to see notes with that tag."
 			})
 		]
 	});
 }
-function NoteRow({ note, selected, onSelect }) {
-	const title = noteTitle(note.body);
-	const preview = notePreview(note.body);
-	const stamp = formatDistanceToNow(note.updatedAt, { addSuffix: true });
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-		type: "button",
-		onClick: () => onSelect(note.id),
-		"aria-current": selected ? "true" : void 0,
-		className: cn("w-full rounded-md border-l-2 px-3 py-3 text-left transition-colors duration-150 min-h-11", selected ? "border-accent bg-card text-foreground" : "border-transparent text-foreground hover:bg-card/70"),
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-			className: "truncate font-serif text-base font-medium tracking-tight",
-			children: title
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "mt-1 flex items-baseline justify-between gap-3",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "truncate text-xs text-muted-foreground",
-				children: preview
-			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("time", {
-				dateTime: new Date(note.updatedAt).toISOString(),
-				className: "shrink-0 text-xs text-muted-foreground tabular-nums",
-				children: stamp
-			})]
-		})]
-	});
-}
-function EmptyList({ hasNotes, query }) {
+function EmptyList({ hasNotes, query, view }) {
+	const heading = view === "favorites" ? hasNotes ? "No favorite notes" : "No favorites yet" : hasNotes ? "No matching notes" : "No notes yet";
+	const sub = view === "favorites" ? "Star a note to pin it here." : hasNotes ? `Nothing matches "${query.trim()}".` : "Start a note and it will appear here.";
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "flex flex-col items-center gap-2 px-4 py-12 text-center",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(FileText, { className: "size-6 text-muted-foreground" }),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 				className: "font-serif text-base",
-				children: hasNotes ? "No matching notes" : "No notes yet"
+				children: heading
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 				className: "text-sm text-muted-foreground",
-				children: hasNotes ? `Nothing matches “${query.trim()}”.` : "Start a note and it will appear here."
+				children: sub
 			})
 		]
 	});
@@ -392,6 +605,73 @@ function SidebarSkeleton() {
 			className: "rounded-md px-3 py-3",
 			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "h-4 w-2/3 rounded-sm bg-muted" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "mt-2 h-3 w-full rounded-sm bg-muted/70" })]
 		}, index))]
+	});
+}
+function SettingsPanel() {
+	const notes = useNotesStore((state) => state.notes);
+	const favoriteCount = notes.filter((n) => n.favorite).length;
+	const tagCount = collectTags(notes).size;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "min-h-0 flex-1 overflow-y-auto px-4 pb-6",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+				className: "mt-2 font-serif text-lg font-medium",
+				children: "Settings"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "mt-1 text-sm text-muted-foreground",
+				children: "Your notes are stored locally in this browser."
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("dl", {
+				className: "mt-5 flex flex-col gap-3",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatRow, {
+						label: "Total notes",
+						value: notes.length
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatRow, {
+						label: "Favorites",
+						value: favoriteCount
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(StatRow, {
+						label: "Tags",
+						value: tagCount
+					})
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "mt-6 border-t border-border pt-4",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+					className: "text-sm font-medium",
+					children: "About"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "mt-1.5 text-sm leading-relaxed text-muted-foreground",
+					children: "Folio is a quiet, local-first notes app. Write in markdown, star your favorites, and organize with tags. Nothing leaves your device."
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "mt-6 border-t border-border pt-4",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+					className: "text-sm font-medium",
+					children: "Storage"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "mt-1.5 text-sm leading-relaxed text-muted-foreground",
+					children: "Notes persist in this browser's local storage. Clearing your browser data will remove them."
+				})]
+			})
+		]
+	});
+}
+function StatRow({ label, value }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "flex items-center justify-between rounded-md bg-card/60 px-3 py-2.5",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("dt", {
+			className: "text-sm text-muted-foreground",
+			children: label
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("dd", {
+			className: "font-serif text-lg font-medium tabular-nums",
+			children: value
+		})]
 	});
 }
 function TooltipProvider({ delayDuration = 400, ...props }) {
@@ -439,6 +719,8 @@ function EditorPane({ editorRef, onRequestDelete, onOpenSidebar, modifier }) {
 	const previewMode = useNotesStore((state) => state.previewMode);
 	const togglePreview = useNotesStore((state) => state.togglePreview);
 	const hasHydrated = useNotesStore((state) => state.hasHydrated);
+	const toggleFavorite = useNotesStore((state) => state.toggleFavorite);
+	const setNoteTags = useNotesStore((state) => state.setNoteTags);
 	const note = notes.find((entry) => entry.id === selectedId) ?? null;
 	if (!hasHydrated) return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "flex h-full flex-col",
@@ -510,36 +792,51 @@ function EditorPane({ editorRef, onRequestDelete, onOpenSidebar, modifier }) {
 					})]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "flex shrink-0 items-center gap-1",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Tooltip, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TooltipTrigger, {
-						asChild: true,
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-							type: "button",
-							size: "icon-sm",
-							variant: previewMode ? "secondary" : "ghost",
-							"aria-pressed": previewMode,
-							"aria-label": previewMode ? "Edit markdown" : "Preview markdown",
-							onClick: () => togglePreview(),
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-								className: "relative flex size-4 items-center justify-center",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Eye, { className: cn("absolute transition-[opacity,transform,filter] duration-200", previewMode ? "scale-100 opacity-100 blur-none" : "scale-[0.25] opacity-0 blur-[4px]") }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PenLine, { className: cn("transition-[opacity,transform,filter] duration-200", previewMode ? "scale-[0.25] opacity-0 blur-[4px]" : "scale-100 opacity-100 blur-none") })]
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Tooltip, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TooltipTrigger, {
+							asChild: true,
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+								type: "button",
+								size: "icon-sm",
+								variant: note.favorite ? "secondary" : "ghost",
+								"aria-pressed": note.favorite,
+								"aria-label": note.favorite ? "Remove from favorites" : "Add to favorites",
+								onClick: () => toggleFavorite(note.id),
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Star, { className: cn("size-4", note.favorite && "fill-accent text-accent") })
 							})
-						})
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TooltipContent, { children: [
-						previewMode ? "Edit" : "Preview",
-						" · ",
-						modifier,
-						modifier === "⌘" ? "E" : "+E"
-					] })] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Tooltip, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TooltipTrigger, {
-						asChild: true,
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-							type: "button",
-							size: "icon-sm",
-							variant: "ghost",
-							"aria-label": "Delete note",
-							onClick: onRequestDelete,
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Trash2, {})
-						})
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TooltipContent, { children: "Delete note" })] })]
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TooltipContent, { children: "Favorite" })] }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Tooltip, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TooltipTrigger, {
+							asChild: true,
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+								type: "button",
+								size: "icon-sm",
+								variant: previewMode ? "secondary" : "ghost",
+								"aria-pressed": previewMode,
+								"aria-label": previewMode ? "Edit markdown" : "Preview markdown",
+								onClick: () => togglePreview(),
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+									className: "relative flex size-4 items-center justify-center",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Eye, { className: cn("absolute transition-[opacity,transform,filter] duration-200", previewMode ? "scale-100 opacity-100 blur-none" : "scale-[0.25] opacity-0 blur-[4px]") }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PenLine, { className: cn("transition-[opacity,transform,filter] duration-200", previewMode ? "scale-[0.25] opacity-0 blur-[4px]" : "scale-100 opacity-100 blur-none") })]
+								})
+							})
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(TooltipContent, { children: [
+							previewMode ? "Edit" : "Preview",
+							" · ",
+							modifier,
+							modifier === "⌘" ? "E" : "+E"
+						] })] }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Tooltip, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TooltipTrigger, {
+							asChild: true,
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+								type: "button",
+								size: "icon-sm",
+								variant: "ghost",
+								"aria-label": "Delete note",
+								onClick: onRequestDelete,
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Trash2, {})
+							})
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TooltipContent, { children: "Delete note" })] })
+					]
 				})]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
@@ -551,6 +848,10 @@ function EditorPane({ editorRef, onRequestDelete, onOpenSidebar, modifier }) {
 					note,
 					editorRef
 				}, note.id)
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TagBar, {
+				note,
+				onSetTags: setNoteTags
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("footer", {
 				className: "flex h-10 shrink-0 items-center justify-between gap-3 border-t border-border px-4 text-xs text-muted-foreground",
@@ -592,6 +893,54 @@ function NoteEditor({ note, editorRef }) {
 				updateNote(note.id, next);
 			}
 		})]
+	});
+}
+function TagBar({ note, onSetTags }) {
+	const [input, setInput] = (0, import_react.useState)("");
+	function addTag() {
+		const tag = input.trim().toLowerCase().replace(/\s+/g, "-");
+		if (!tag || note.tags.includes(tag)) {
+			setInput("");
+			return;
+		}
+		onSetTags(note.id, [...note.tags, tag]);
+		setInput("");
+	}
+	function removeTag(tag) {
+		onSetTags(note.id, note.tags.filter((t) => t !== tag));
+	}
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "flex h-9 shrink-0 items-center gap-2 border-t border-border px-4 text-xs",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Hash, { className: "size-3.5 shrink-0 text-muted-foreground" }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "flex flex-1 items-center gap-1.5 overflow-x-auto",
+				children: note.tags.map((tag) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+					className: "inline-flex shrink-0 items-center gap-1 rounded-sm bg-muted px-2 py-1 text-muted-foreground",
+					children: [tag, /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+						type: "button",
+						"aria-label": `Remove tag ${tag}`,
+						onClick: () => removeTag(tag),
+						className: "text-muted-foreground/70 transition-colors hover:text-foreground",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(X, { className: "size-3" })
+					})]
+				}, tag))
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+				type: "text",
+				value: input,
+				onChange: (e) => setInput(e.target.value),
+				onKeyDown: (e) => {
+					if (e.key === "Enter" || e.key === ",") {
+						e.preventDefault();
+						addTag();
+					}
+				},
+				onBlur: addTag,
+				placeholder: "Add tag…",
+				className: "w-24 shrink-0 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
+			})
+		]
 	});
 }
 function AlertDialog({ ...props }) {
@@ -703,15 +1052,29 @@ function readPersistedNotes() {
 		return null;
 	}
 }
+function migrateNote(note) {
+	return {
+		id: note.id ?? crypto.randomUUID(),
+		body: note.body ?? "",
+		favorite: note.favorite ?? false,
+		tags: note.tags ?? [],
+		createdAt: note.createdAt ?? Date.now(),
+		updatedAt: note.updatedAt ?? Date.now()
+	};
+}
 function finishHydration() {
 	if (useNotesStore.getState().hasHydrated) return;
 	const persisted = readPersistedNotes();
 	if (persisted?.notes && persisted.notes.length > 0) {
-		const selectedId = persisted.selectedId && persisted.notes.some((note) => note.id === persisted.selectedId) ? persisted.selectedId : persisted.notes[0]?.id ?? null;
+		const notes = persisted.notes.map(migrateNote);
+		const selectedId = persisted.selectedId && notes.some((note) => note.id === persisted.selectedId) ? persisted.selectedId : notes[0]?.id ?? null;
 		useNotesStore.setState({
-			notes: persisted.notes,
+			notes,
 			selectedId,
-			previewMode: Boolean(persisted.previewMode)
+			previewMode: Boolean(persisted.previewMode),
+			sidebarCollapsed: Boolean(persisted.sidebarCollapsed),
+			activeView: persisted.activeView === "favorites" || persisted.activeView === "tags" || persisted.activeView === "settings" ? persisted.activeView : "notes",
+			activeTag: persisted.activeTag ?? null
 		});
 	} else useNotesStore.getState().loadSeed();
 	useNotesStore.setState({ hasHydrated: true });
@@ -842,14 +1205,11 @@ function NotesApp() {
 		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "flex h-dvh overflow-hidden bg-background text-foreground",
 			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("aside", {
-					className: "hidden w-72 shrink-0 border-r border-border md:flex md:flex-col xl:w-80",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NoteSidebar, {
-						searchRef: desktopSearchRef,
-						editorRef,
-						modifier
-					})
-				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CollapsedSidebarWrapper, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(NoteSidebar, {
+					searchRef: desktopSearchRef,
+					editorRef,
+					modifier
+				}) }),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Dialog, {
 					open: mobileOpen,
 					onOpenChange: setMobileOpen,
@@ -943,6 +1303,13 @@ function ShortcutList({ modifier }) {
 				}, part))
 			})]
 		}, label))
+	});
+}
+function CollapsedSidebarWrapper({ children }) {
+	const collapsed = useNotesStore((state) => state.sidebarCollapsed);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("aside", {
+		className: cn("hidden shrink-0 border-r border-border md:flex md:flex-col transition-[width] duration-300 ease-smooth", collapsed ? "w-16" : "w-72 xl:w-80"),
+		children
 	});
 }
 function Home() {

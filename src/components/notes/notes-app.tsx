@@ -23,7 +23,7 @@ import {
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useNotesHydration } from "@/lib/notes/hydrate";
 import { filterNotes, noteTitle, useNotesStore } from "@/lib/notes/store";
-import { isMacUserAgent } from "@/lib/utils";
+import { cn, isMacUserAgent } from "@/lib/utils";
 
 function isMobileViewport(): boolean {
   return window.matchMedia("(max-width: 767px)").matches;
@@ -177,13 +177,13 @@ export function NotesApp() {
   return (
     <TooltipProvider>
       <div className="flex h-dvh overflow-hidden bg-background text-foreground">
-        <aside className="hidden w-72 shrink-0 border-r border-border md:flex md:flex-col xl:w-80">
+        <CollapsedSidebarWrapper>
           <NoteSidebar
             searchRef={desktopSearchRef}
             editorRef={editorRef}
             modifier={modifier}
           />
-        </aside>
+        </CollapsedSidebarWrapper>
 
         <Dialog open={mobileOpen} onOpenChange={setMobileOpen}>
           <DialogContent
@@ -300,5 +300,19 @@ function ShortcutList({ modifier }: { modifier: string }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+function CollapsedSidebarWrapper({ children }: { children: React.ReactNode }) {
+  const collapsed = useNotesStore((state) => state.sidebarCollapsed);
+  return (
+    <aside
+      className={cn(
+        "hidden shrink-0 border-r border-border md:flex md:flex-col transition-[width] duration-300 ease-smooth",
+        collapsed ? "w-16" : "w-72 xl:w-80",
+      )}
+    >
+      {children}
+    </aside>
   );
 }

@@ -8,6 +8,9 @@ type PersistedShape = {
     notes?: Note[];
     selectedId?: string | null;
     previewMode?: boolean;
+    sidebarCollapsed?: boolean;
+    activeView?: string;
+    activeTag?: string | null;
   };
 };
 
@@ -23,20 +26,40 @@ function readPersistedNotes(): PersistedShape["state"] | null {
   }
 }
 
+function migrateNote(note: Partial<Note>): Note {
+  return {
+    id: note.id ?? crypto.randomUUID(),
+    body: note.body ?? "",
+    favorite: note.favorite ?? false,
+    tags: note.tags ?? [],
+    createdAt: note.createdAt ?? Date.now(),
+    updatedAt: note.updatedAt ?? Date.now(),
+  };
+}
+
 function finishHydration() {
   if (useNotesStore.getState().hasHydrated) return;
 
   const persisted = readPersistedNotes();
   if (persisted?.notes && persisted.notes.length > 0) {
+    const notes = persisted.notes.map(migrateNote);
     const selectedId =
       persisted.selectedId &&
-      persisted.notes.some((note) => note.id === persisted.selectedId)
+      notes.some((note) => note.id === persisted.selectedId)
         ? persisted.selectedId
-        : (persisted.notes[0]?.id ?? null);
+        : (notes[0]?.id ?? null);
     useNotesStore.setState({
-      notes: persisted.notes,
+      notes,
       selectedId,
       previewMode: Boolean(persisted.previewMode),
+      sidebarCollapsed: Boolean(persisted.sidebarCollapsed),
+      activeView:
+        persisted.activeView === "favorites" ||
+        persisted.activeView === "tags" ||
+        persisted.activeView === "settings"
+          ? persisted.activeView
+          : "notes",
+      activeTag: persisted.activeTag ?? null,
     });
   } else {
     useNotesStore.getState().loadSeed();

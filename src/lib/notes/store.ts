@@ -4,15 +4,22 @@ import { createJSONStorage, persist } from "zustand/middleware";
 export type Note = {
   id: string;
   body: string;
+  favorite: boolean;
+  tags: string[];
   createdAt: number;
   updatedAt: number;
 };
+
+export type SidebarView = "notes" | "favorites" | "tags" | "settings";
 
 type NotesState = {
   notes: Note[];
   selectedId: string | null;
   search: string;
   previewMode: boolean;
+  sidebarCollapsed: boolean;
+  activeView: SidebarView;
+  activeTag: string | null;
   hasHydrated: boolean;
   createNote: () => string;
   deleteNote: (id: string) => void;
@@ -21,6 +28,11 @@ type NotesState = {
   setSearch: (search: string) => void;
   togglePreview: () => void;
   setPreviewMode: (previewMode: boolean) => void;
+  toggleFavorite: (id: string) => void;
+  setNoteTags: (id: string, tags: string[]) => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
+  setActiveView: (view: SidebarView) => void;
+  setActiveTag: (tag: string | null) => void;
   loadSeed: () => void;
 };
 
@@ -96,6 +108,18 @@ Keep your hands on the keyboard.
 On a phone, open the sidebar from the menu and swipe through your notes as usual.
 `;
 
+const SEED_IDEAS = `# Ideas
+
+Things to explore when there is time.
+
+- A walking route through the old part of town
+- Read *The Peregrine* again
+- Try sourdough with a colder proof
+- Write a letter to someone I owe one
+
+Tagged with \`personal\` and \`ideas\` so they are easy to find later.
+`;
+
 export function noteTitle(body: string): string {
   const line = body.split(/\r?\n/).find((entry) => entry.trim().length > 0) ?? "";
   const cleaned = line
@@ -133,20 +157,34 @@ function createSeedNotes(now: number): Note[] {
     {
       id: "seed-welcome",
       body: SEED_WELCOME,
+      favorite: true,
+      tags: [],
       createdAt: now - 1000 * 60 * 60 * 26,
       updatedAt: now - 1000 * 60 * 12,
     },
     {
       id: "seed-markdown",
       body: SEED_MARKDOWN,
+      favorite: false,
+      tags: ["reference"],
       createdAt: now - 1000 * 60 * 60 * 30,
       updatedAt: now - 1000 * 60 * 50,
     },
     {
       id: "seed-shortcuts",
       body: SEED_SHORTCUTS,
+      favorite: false,
+      tags: ["reference"],
       createdAt: now - 1000 * 60 * 60 * 48,
       updatedAt: now - 1000 * 60 * 80,
+    },
+    {
+      id: "seed-ideas",
+      body: SEED_IDEAS,
+      favorite: true,
+      tags: ["personal", "ideas"],
+      createdAt: now - 1000 * 60 * 60 * 12,
+      updatedAt: now - 1000 * 60 * 5,
     },
   ];
 }
@@ -167,6 +205,16 @@ export function filterNotes(notes: Note[], query: string): Note[] {
   });
 }
 
+export function collectTags(notes: Note[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const note of notes) {
+    for (const tag of note.tags) {
+      counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+  }
+  return counts;
+}
+
 export const useNotesStore = create<NotesState>()(
   persist(
     (set, get) => ({
@@ -174,12 +222,17 @@ export const useNotesStore = create<NotesState>()(
       selectedId: null,
       search: "",
       previewMode: false,
+      sidebarCollapsed: false,
+      activeView: "notes",
+      activeTag: null,
       hasHydrated: false,
       createNote: () => {
         const now = Date.now();
         const note: Note = {
           id: crypto.randomUUID(),
           body: "",
+          favorite: false,
+          tags: get().activeView === "tags" && get().activeTag ? [get().activeTag as string] : [],
           createdAt: now,
           updatedAt: now,
         };
@@ -221,6 +274,23 @@ export const useNotesStore = create<NotesState>()(
       setSearch: (search) => set({ search }),
       togglePreview: () => set((state) => ({ previewMode: !state.previewMode })),
       setPreviewMode: (previewMode) => set({ previewMode }),
+      toggleFavorite: (id) => {
+        set((state) => ({
+          notes: state.notes.map((note) =>
+            note.id === id ? { ...note, favorite: !note.favorite, updatedAt: Date.now() } : note,
+          ),
+        }));
+      },
+      setNoteTags: (id, tags) => {
+        set((state) => ({
+          notes: state.notes.map((note) =>
+            note.id === id ? { ...note, tags: tags, updatedAt: Date.now() } : note,
+          ),
+        }));
+      },
+      setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
+      setActiveView: (view) => set({ activeView: view, activeTag: view === "tags" ? get().activeTag : null }),
+      setActiveTag: (tag) => set({ activeTag: tag }),
       loadSeed: () => {
         if (get().notes.length > 0) return;
         const notes = createSeedNotes(Date.now());
@@ -235,6 +305,9 @@ export const useNotesStore = create<NotesState>()(
         notes: state.notes,
         selectedId: state.selectedId,
         previewMode: state.previewMode,
+        sidebarCollapsed: state.sidebarCollapsed,
+        activeView: state.activeView,
+        activeTag: state.activeTag,
       }),
     },
   ),

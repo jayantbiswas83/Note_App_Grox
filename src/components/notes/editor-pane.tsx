@@ -1,7 +1,7 @@
 import type { RefObject } from "react";
 import { useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
-import { Eye, Menu, PenLine, Trash2 } from "lucide-react";
+import { Eye, Menu, PenLine, Trash2, Star, Hash, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -35,6 +35,8 @@ export function EditorPane({
   const previewMode = useNotesStore((state) => state.previewMode);
   const togglePreview = useNotesStore((state) => state.togglePreview);
   const hasHydrated = useNotesStore((state) => state.hasHydrated);
+  const toggleFavorite = useNotesStore((state) => state.toggleFavorite);
+  const setNoteTags = useNotesStore((state) => state.setNoteTags);
   const note = notes.find((entry) => entry.id === selectedId) ?? null;
 
   if (!hasHydrated) {
@@ -105,6 +107,21 @@ export function EditorPane({
               <Button
                 type="button"
                 size="icon-sm"
+                variant={note.favorite ? "secondary" : "ghost"}
+                aria-pressed={note.favorite}
+                aria-label={note.favorite ? "Remove from favorites" : "Add to favorites"}
+                onClick={() => toggleFavorite(note.id)}
+              >
+                <Star className={cn("size-4", note.favorite && "fill-accent text-accent")} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Favorite</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                size="icon-sm"
                 variant={previewMode ? "secondary" : "ghost"}
                 aria-pressed={previewMode}
                 aria-label={previewMode ? "Edit markdown" : "Preview markdown"}
@@ -162,6 +179,8 @@ export function EditorPane({
         )}
       </div>
 
+      <TagBar note={note} onSetTags={setNoteTags} />
+
       <footer className="flex h-10 shrink-0 items-center justify-between gap-3 border-t border-border px-4 text-xs text-muted-foreground">
         <time
           dateTime={new Date(note.updatedAt).toISOString()}
@@ -205,5 +224,70 @@ function NoteEditor({
         }}
       />
     </label>
+  );
+}
+
+function TagBar({
+  note,
+  onSetTags,
+}: {
+  note: Note;
+  onSetTags: (id: string, tags: string[]) => void;
+}) {
+  const [input, setInput] = useState("");
+
+  function addTag() {
+    const tag = input.trim().toLowerCase().replace(/\s+/g, "-");
+    if (!tag || note.tags.includes(tag)) {
+      setInput("");
+      return;
+    }
+    onSetTags(note.id, [...note.tags, tag]);
+    setInput("");
+  }
+
+  function removeTag(tag: string) {
+    onSetTags(
+      note.id,
+      note.tags.filter((t) => t !== tag),
+    );
+  }
+
+  return (
+    <div className="flex h-9 shrink-0 items-center gap-2 border-t border-border px-4 text-xs">
+      <Hash className="size-3.5 shrink-0 text-muted-foreground" />
+      <div className="flex flex-1 items-center gap-1.5 overflow-x-auto">
+        {note.tags.map((tag) => (
+          <span
+            key={tag}
+            className="inline-flex shrink-0 items-center gap-1 rounded-sm bg-muted px-2 py-1 text-muted-foreground"
+          >
+            {tag}
+            <button
+              type="button"
+              aria-label={`Remove tag ${tag}`}
+              onClick={() => removeTag(tag)}
+              className="text-muted-foreground/70 transition-colors hover:text-foreground"
+            >
+              <X className="size-3" />
+            </button>
+          </span>
+        ))}
+      </div>
+      <input
+        type="text"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === ",") {
+            e.preventDefault();
+            addTag();
+          }
+        }}
+        onBlur={addTag}
+        placeholder="Add tag…"
+        className="w-24 shrink-0 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
+      />
+    </div>
   );
 }

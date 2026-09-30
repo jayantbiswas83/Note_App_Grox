@@ -4,8 +4,8 @@ import { _ as createFileRoute, d as Scripts, f as HeadContent, g as lazyRouteCom
 import { O as require_jsx_runtime } from "../_libs/@radix-ui/react-alert-dialog+[...].mjs";
 import { n as TriangleAlert } from "../_libs/lucide-react.mjs";
 import { a as union, i as string, n as number, r as object, t as literal } from "../_libs/zod.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/router-DNRQ_JMB.js
-var router_DNRQ_JMB_exports = /* @__PURE__ */ __exportAll({ getRouter: () => getRouter });
+//#region node_modules/.nitro/vite/services/ssr/assets/router-B8B2GJQg.js
+var router_B8B2GJQg_exports = /* @__PURE__ */ __exportAll({ getRouter: () => getRouter });
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var FALLBACK_MESSAGE = "An unexpected error occurred. Try reloading the page.";
@@ -299,7 +299,7 @@ function PreviewHostBridge() {
 	}, [router]);
 	return null;
 }
-var styles_default = "/assets/styles-BXB04zLt.css";
+var styles_default = "/assets/styles-DmsdzRXM.css";
 var APP_NAME = "Folio";
 var Route$1 = createRootRoute({
 	head: () => ({
@@ -365,7 +365,7 @@ var Route$1 = createRootRoute({
 		})]
 	})
 });
-var $$splitComponentImporter = () => import("./routes-CfGQq6-R.mjs");
+var $$splitComponentImporter = () => import("./routes-Cer0GpJY.mjs");
 var rootRouteChildren = { IndexRoute: createFileRoute("/")({ component: lazyRouteComponent($$splitComponentImporter, "component") }).update({
 	id: "/",
 	path: "/",
@@ -379,4 +379,4 @@ function getRouter() {
 	});
 }
 //#endregion
-export { getRouter, router_DNRQ_JMB_exports as t };
+export { getRouter, router_B8B2GJQg_exports as t };
