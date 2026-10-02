@@ -181,7 +181,7 @@ export function EditorPane({
             <Menu className="size-4.5" />
           </Button>
 
-          <h1 className="min-w-0 flex-1 overflow-hidden font-serif text-lg font-medium tracking-tight text-foreground truncate">
+          <h1 className="min-w-0 flex-1 overflow-hidden font-serif text-xl font-semibold tracking-tight text-foreground truncate">
             {noteTitle(note.body)}
           </h1>
         </div>
