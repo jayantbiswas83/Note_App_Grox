@@ -9,10 +9,19 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Hash,
+  X,
+  Sparkles,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { FolioBrand } from "@/components/notes/folio-brand";
+import { FolioCrystalArtwork } from "@/components/notes/folio-crystal-artwork";
 import {
   collectTags,
   filterNotes,
@@ -105,36 +114,65 @@ export function NoteSidebar({
   return (
     <div
       className={cn(
-        "flex h-full min-h-0 flex-col bg-sidebar transition-[width] duration-300 ease-smooth",
+        "flex h-full min-h-0 flex-col bg-sidebar border-r border-border/70 select-none transition-[width] duration-300 ease-smooth",
         collapsed ? "w-16" : "w-full",
       )}
     >
-      {/* Header */}
-      <div className="flex items-start justify-between gap-2 px-3 pt-4 pb-3">
-        {!collapsed && (
-          <div className="min-w-0 flex-1">
-            <p className="font-serif text-2xl leading-none font-medium tracking-tight italic">
-              Folio
-            </p>
-            <p className="mt-1 text-xs tracking-[0.16em] text-muted-foreground uppercase">
-              Notes
-            </p>
-          </div>
-        )}
-        <Button
-          type="button"
-          size="icon-sm"
-          variant="ghost"
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          onClick={() => setCollapsed(!collapsed)}
-          className={cn("shrink-0 text-muted-foreground", collapsed && "mx-auto")}
-        >
-          {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
-        </Button>
+      {/* Brand Header */}
+      <div className="flex items-center justify-between gap-2 px-3.5 pt-4 pb-3">
+        <FolioBrand collapsed={collapsed} />
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="ghost"
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              onClick={() => setCollapsed(!collapsed)}
+              className={cn(
+                "size-8 rounded-md text-muted-foreground hover:bg-card/70 hover:text-foreground",
+                collapsed && "mx-auto mt-2",
+              )}
+            >
+              {collapsed ? (
+                <PanelLeftOpen className="size-4" />
+              ) : (
+                <PanelLeftClose className="size-4" />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side={collapsed ? "right" : "bottom"}>
+            {collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          </TooltipContent>
+        </Tooltip>
       </div>
 
-      {/* Navigation */}
-      <nav className="px-2 pb-2">
+      {/* Primary Action Button (New Note) in Collapsed Mode */}
+      {collapsed && (
+        <div className="flex justify-center px-2 py-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="default"
+                aria-label="New note"
+                onClick={handleCreate}
+                className="size-10 rounded-lg shadow-sm shadow-accent/25"
+              >
+                <Plus className="size-4.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              New note · {modifier}N
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      )}
+
+      {/* Navigation tabs */}
+      <nav className="px-2.5 pb-2">
         <ul className="flex flex-col gap-0.5">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
@@ -147,33 +185,71 @@ export function NoteSidebar({
                   : item.id === "tags"
                     ? sortedTagNames.length
                     : undefined;
+
+            if (collapsed) {
+              return (
+                <li key={item.id} className="flex justify-center">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => handleNavClick(item.id)}
+                        aria-current={active ? "true" : undefined}
+                        className={cn(
+                          "flex size-10 items-center justify-center rounded-lg text-sm transition-all duration-150",
+                          active
+                            ? "bg-card text-accent shadow-soft border border-border/80"
+                            : "text-muted-foreground hover:bg-card/60 hover:text-foreground",
+                        )}
+                      >
+                        <Icon className="size-4 shrink-0" />
+                        <span className="sr-only">{item.label}</span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      {item.label}
+                      {count !== undefined && count > 0 ? ` (${count})` : ""}
+                    </TooltipContent>
+                  </Tooltip>
+                </li>
+              );
+            }
+
             return (
               <li key={item.id}>
                 <button
                   type="button"
                   onClick={() => handleNavClick(item.id)}
                   aria-current={active ? "true" : undefined}
-                  title={collapsed ? item.label : undefined}
                   className={cn(
-                    "group flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors duration-150",
-                    collapsed && "justify-center px-0",
+                    "group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-150",
                     active
-                      ? "bg-card text-foreground shadow-soft"
-                      : "text-muted-foreground hover:bg-card/60 hover:text-foreground",
+                      ? "bg-card text-foreground font-medium shadow-soft border border-border/70"
+                      : "text-muted-foreground hover:bg-card/50 hover:text-foreground",
                   )}
                 >
-                  <Icon className="size-4 shrink-0" />
-                  {!collapsed && (
-                    <>
-                      <span className="flex-1 text-left font-medium">
-                        {item.label}
-                      </span>
-                      {count !== undefined && count > 0 && (
-                        <span className="text-xs tabular-nums text-muted-foreground">
-                          {count}
-                        </span>
+                  {/* Subtle active crystalline indicator */}
+                  {active && (
+                    <span className="absolute left-1.5 top-1/2 -translate-y-1/2 h-3.5 w-1 rounded-full bg-accent" />
+                  )}
+                  <Icon
+                    className={cn(
+                      "size-4 shrink-0 transition-colors",
+                      active ? "text-accent ml-1" : "text-muted-foreground group-hover:text-foreground",
+                    )}
+                  />
+                  <span className="flex-1 text-left">{item.label}</span>
+                  {count !== undefined && count > 0 && (
+                    <span
+                      className={cn(
+                        "rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold tabular-nums transition-colors",
+                        active
+                          ? "bg-accent-subtle text-accent border border-accent/20"
+                          : "text-muted-foreground bg-muted/60",
                       )}
-                    </>
+                    >
+                      {count}
+                    </span>
                   )}
                 </button>
               </li>
@@ -184,13 +260,16 @@ export function NoteSidebar({
 
       {/* Tag list when in Tags view */}
       {activeView === "tags" && !collapsed && (
-        <div className="px-3 pb-2">
+        <div className="px-3 pb-2 pt-1 border-t border-border/40">
+          <p className="px-1 pb-1.5 text-[0.6875rem] font-semibold tracking-wider text-muted-foreground uppercase">
+            Labels
+          </p>
           {sortedTagNames.length === 0 ? (
-            <p className="px-1 py-3 text-sm text-muted-foreground">
-              No tags yet. Add tags to a note from its toolbar.
+            <p className="px-1 py-3 text-xs text-muted-foreground">
+              No tags yet. Add tags from any note's footer.
             </p>
           ) : (
-            <ul className="flex flex-col gap-0.5">
+            <ul className="flex flex-col gap-0.5 max-h-40 overflow-y-auto">
               {sortedTagNames.map((tag) => {
                 const active = activeTag === tag;
                 return (
@@ -199,15 +278,15 @@ export function NoteSidebar({
                       type="button"
                       onClick={() => setActiveTag(active ? null : tag)}
                       className={cn(
-                        "flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors duration-150",
+                        "flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs transition-colors duration-150",
                         active
-                          ? "bg-card text-foreground shadow-soft"
+                          ? "bg-card text-accent font-medium shadow-soft border border-border/60"
                           : "text-muted-foreground hover:bg-card/60 hover:text-foreground",
                       )}
                     >
-                      <Hash className="size-3.5 shrink-0" />
-                      <span className="flex-1 text-left">{tag}</span>
-                      <span className="text-xs tabular-nums text-muted-foreground">
+                      <Hash className="size-3 text-accent/70 shrink-0" />
+                      <span className="flex-1 text-left truncate">{tag}</span>
+                      <span className="text-[0.625rem] tabular-nums text-muted-foreground">
                         {tagCounts.get(tag)}
                       </span>
                     </button>
@@ -219,52 +298,86 @@ export function NoteSidebar({
         </div>
       )}
 
-      {/* Search + New note (hidden in Settings and collapsed) */}
+      {/* Search + New Note in Expanded Mode */}
       {activeView !== "settings" && !collapsed && (
-        <>
-          <div className="px-3 pb-3 pt-1">
-            <label className="relative block">
-              <span className="sr-only">Search notes</span>
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                ref={searchRef}
-                type="search"
-                value={search}
-                autoComplete="off"
-                autoCorrect="off"
-                spellCheck={false}
-                placeholder="Search"
-                aria-keyshortcuts="/ Meta+K"
-                onChange={(event) => setSearch(event.target.value)}
-                className="h-10 border-transparent bg-card/80 pr-12 pl-9"
-              />
-              <kbd className="app-kbd pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 max-md:hidden">
+        <div className="px-3 pb-2.5 pt-1 flex flex-col gap-2">
+          {/* Refined Search Box */}
+          <label className="relative block">
+            <span className="sr-only">Search notes</span>
+            <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              ref={searchRef}
+              type="search"
+              value={search}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              placeholder="Search notes…"
+              aria-keyshortcuts="/ Meta+K"
+              onChange={(event) => setSearch(event.target.value)}
+              className="h-9 rounded-lg border-border/70 bg-card/75 pr-14 pl-8.5 text-xs focus:bg-card"
+            />
+            {search ? (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                aria-label="Clear search"
+                className="absolute top-1/2 right-2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-3.5" />
+              </button>
+            ) : (
+              <kbd className="app-kbd pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 max-md:hidden text-[0.65rem]">
                 {modifier === "⌘" ? "⌘K" : "Ctrl K"}
               </kbd>
-            </label>
-          </div>
+            )}
+          </label>
 
-          <div className="px-3 pb-2">
-            <Button
-              type="button"
-              variant="default"
-              className="h-10 w-full justify-start gap-2"
-              onClick={handleCreate}
-            >
+          {/* Primary Create Action */}
+          <Button
+            type="button"
+            variant="default"
+            className="h-9.5 w-full justify-between gap-2 rounded-lg font-medium text-xs tracking-tight"
+            onClick={handleCreate}
+          >
+            <span className="flex items-center gap-1.5">
               <Plus className="size-4" />
-              New note
-            </Button>
-          </div>
-        </>
+              Compose Note
+            </span>
+            <kbd className="inline-flex items-center text-[0.65rem] opacity-80 font-mono tracking-wide">
+              {modifier === "⌘" ? "⌘N" : "Ctrl+N"}
+            </kbd>
+          </Button>
+        </div>
       )}
 
       {activeView === "settings" && !collapsed ? (
         <SettingsPanel />
       ) : (
         <>
-          {/* Note list */}
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            <div className="flex flex-col gap-0.5 px-2 pb-4">
+          {/* Note List Header */}
+          {!collapsed && (
+            <div className="flex items-center justify-between px-3.5 pt-2 pb-1 text-[0.6875rem] font-semibold tracking-wider text-muted-foreground uppercase border-t border-border/40">
+              <span>
+                {activeView === "favorites"
+                  ? "Favorites"
+                  : activeView === "tags" && activeTag
+                    ? `Tag: #${activeTag}`
+                    : "Ledger"}
+              </span>
+              <span className="tabular-nums">
+                {hasHydrated
+                  ? search.trim()
+                    ? `${visible.length} found`
+                    : `${visible.length}`
+                  : ""}
+              </span>
+            </div>
+          )}
+
+          {/* Note list scroll viewport */}
+          <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-4">
+            <div className="flex flex-col gap-1">
               {!hasHydrated ? (
                 <SidebarSkeleton />
               ) : activeView === "tags" && !activeTag ? (
@@ -274,6 +387,7 @@ export function NoteSidebar({
                   hasNotes={notes.length > 0}
                   query={search}
                   view={activeView}
+                  onCreate={handleCreate}
                 />
               ) : (
                 visible.map((note) => (
@@ -289,16 +403,6 @@ export function NoteSidebar({
               )}
             </div>
           </div>
-
-          {!collapsed && (
-            <p className="px-4 py-3 text-xs text-muted-foreground">
-              {hasHydrated
-                ? search.trim()
-                  ? `${visible.length} match${visible.length === 1 ? "" : "es"}`
-                  : `${visible.length} note${visible.length === 1 ? "" : "s"}`
-                : "Opening notes"}
-            </p>
-          )}
         </>
       )}
     </div>
@@ -324,73 +428,98 @@ function NoteRow({
 
   if (collapsed) {
     return (
-      <button
-        type="button"
-        onClick={() => onSelect(note.id)}
-        aria-label={title}
-        aria-current={selected ? "true" : undefined}
-        className={cn(
-          "flex size-10 items-center justify-center rounded-md text-sm transition-colors duration-150",
-          selected
-            ? "bg-card text-foreground shadow-soft"
-            : "text-muted-foreground hover:bg-card/60 hover:text-foreground",
-        )}
-      >
-        {note.favorite ? (
-          <Star className="size-4 text-accent fill-accent" />
-        ) : (
-          <FileText className="size-4" />
-        )}
-      </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={() => onSelect(note.id)}
+            aria-label={title}
+            aria-current={selected ? "true" : undefined}
+            className={cn(
+              "mx-auto flex size-10 items-center justify-center rounded-lg text-sm transition-all duration-150",
+              selected
+                ? "bg-card text-accent shadow-card border border-accent/30"
+                : "text-muted-foreground hover:bg-card/70 hover:text-foreground",
+            )}
+          >
+            {note.favorite ? (
+              <Star className="size-4 text-amber-500 fill-amber-400" />
+            ) : (
+              <FileText className="size-4" />
+            )}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right">
+          <div className="font-serif font-medium">{title}</div>
+          <div className="text-[10px] text-muted-foreground">{stamp}</div>
+        </TooltipContent>
+      </Tooltip>
     );
   }
 
   return (
     <div
       className={cn(
-        "group relative rounded-md border-l-2 transition-colors duration-150",
+        "group relative rounded-lg border transition-all duration-150",
         selected
-          ? "border-accent bg-card text-foreground"
-          : "border-transparent text-foreground hover:bg-card/70",
+          ? "border-border/80 border-l-[3px] border-l-accent bg-card text-foreground shadow-card"
+          : "border-transparent border-l-[3px] border-l-transparent text-foreground hover:bg-card/65 hover:border-border/40",
       )}
     >
       <button
         type="button"
         onClick={() => onSelect(note.id)}
         aria-current={selected ? "true" : undefined}
-        className="w-full px-3 py-3 text-left min-h-11"
+        className="w-full px-3 py-2.5 text-left"
       >
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 pr-6">
           {note.favorite && (
-            <Star className="size-3.5 shrink-0 text-accent fill-accent" />
+            <Star className="size-3.5 shrink-0 text-amber-500 fill-amber-400" />
           )}
-          <div className="truncate font-serif text-base font-medium tracking-tight">
+          <span
+            className={cn(
+              "truncate font-serif text-[0.9375rem] font-medium tracking-tight",
+              selected ? "text-foreground font-semibold" : "text-foreground/90",
+            )}
+          >
             {title}
-          </div>
+          </span>
         </div>
-        <div className="mt-1 flex items-baseline justify-between gap-3">
-          <p className="truncate text-xs text-muted-foreground">{preview}</p>
+
+        <p className="mt-1 line-clamp-1 text-xs text-muted-foreground/90 leading-relaxed font-sans">
+          {preview}
+        </p>
+
+        <div className="mt-2 flex items-center justify-between gap-2 text-[0.6875rem] text-muted-foreground">
           <time
             dateTime={new Date(note.updatedAt).toISOString()}
-            className="shrink-0 text-xs text-muted-foreground tabular-nums"
+            className="tabular-nums font-sans"
           >
             {stamp}
           </time>
+
+          {note.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {note.tags.slice(0, 2).map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-0.5 rounded-sm bg-accent-subtle/90 px-1.5 py-0.2 text-[0.625rem] font-medium text-accent border border-accent/15"
+                >
+                  <Hash className="size-2 text-accent/80" />
+                  {tag}
+                </span>
+              ))}
+              {note.tags.length > 2 && (
+                <span className="text-[0.625rem] text-muted-foreground font-medium">
+                  +{note.tags.length - 2}
+                </span>
+              )}
+            </div>
+          )}
         </div>
-        {note.tags.length > 0 && (
-          <div className="mt-1.5 flex flex-wrap gap-1">
-            {note.tags.map((tag) => (
-              <span
-                key={tag}
-                className="inline-flex items-center gap-0.5 rounded-sm bg-muted px-1.5 py-0.5 text-[0.625rem] text-muted-foreground"
-              >
-                <Hash className="size-2.5" />
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
       </button>
+
+      {/* Favorite quick toggle */}
       <button
         type="button"
         onClick={(e) => {
@@ -399,14 +528,14 @@ function NoteRow({
         }}
         aria-label={note.favorite ? "Remove from favorites" : "Add to favorites"}
         className={cn(
-          "absolute top-2.5 right-2 size-7 rounded-md opacity-0 transition-opacity duration-150 hover:bg-muted group-hover:opacity-100",
+          "absolute top-2 right-2 flex size-6.5 items-center justify-center rounded-md opacity-0 transition-opacity duration-150 hover:bg-muted/70 group-hover:opacity-100",
           note.favorite && "opacity-100",
         )}
       >
         {note.favorite ? (
-          <Star className="size-3.5 text-accent fill-accent" />
+          <Star className="size-3.5 text-amber-500 fill-amber-400" />
         ) : (
-          <Star className="size-3.5 text-muted-foreground" />
+          <Star className="size-3.5 text-muted-foreground/60 hover:text-foreground" />
         )}
       </button>
     </div>
@@ -415,11 +544,13 @@ function NoteRow({
 
 function TagHint() {
   return (
-    <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
-      <Tag className="size-6 text-muted-foreground" />
-      <p className="font-serif text-base">Select a tag</p>
-      <p className="text-sm text-muted-foreground">
-        Choose a tag above to see notes with that tag.
+    <div className="flex flex-col items-center gap-2 px-4 py-12 text-center select-none">
+      <div className="flex size-10 items-center justify-center rounded-full bg-accent-subtle text-accent border border-accent/20">
+        <Tag className="size-4.5" />
+      </div>
+      <p className="font-serif text-sm font-medium">Select a label</p>
+      <p className="text-xs text-muted-foreground max-w-[12rem]">
+        Choose a label above to filter notes by classification.
       </p>
     </div>
   );
@@ -429,42 +560,74 @@ function EmptyList({
   hasNotes,
   query,
   view,
+  onCreate,
 }: {
   hasNotes: boolean;
   query: string;
   view: SidebarView;
+  onCreate: () => void;
 }) {
-  const heading =
-    view === "favorites"
-      ? hasNotes
-        ? "No favorite notes"
-        : "No favorites yet"
-      : hasNotes
-        ? "No matching notes"
-        : "No notes yet";
-  const sub =
-    view === "favorites"
-      ? "Star a note to pin it here."
-      : hasNotes
-        ? `Nothing matches "${query.trim()}".`
-        : "Start a note and it will appear here.";
+  const isSearch = query.trim().length > 0;
+  const isFavorites = view === "favorites";
+
+  const heading = isFavorites
+    ? hasNotes
+      ? "No favorite notes"
+      : "No favorites yet"
+    : isSearch
+      ? "No matches found"
+      : "No notes yet";
+
+  const sub = isFavorites
+    ? "Star any note to keep it close at hand."
+    : isSearch
+      ? `Nothing found matching “${query.trim()}”.`
+      : "Begin your first thought or observation.";
+
   return (
-    <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
-      <FileText className="size-6 text-muted-foreground" />
-      <p className="font-serif text-base">{heading}</p>
-      <p className="text-sm text-muted-foreground">{sub}</p>
+    <div className="flex flex-col items-center gap-3 px-4 py-8 text-center select-none">
+      {!hasNotes && !isSearch && !isFavorites ? (
+        <FolioCrystalArtwork size="sm" />
+      ) : (
+        <div className="flex size-11 items-center justify-center rounded-xl bg-card border border-border/80 shadow-soft text-accent">
+          {isFavorites ? (
+            <Star className="size-5 text-amber-500/80" />
+          ) : isSearch ? (
+            <Search className="size-5 text-muted-foreground" />
+          ) : (
+            <Sparkles className="size-5 text-accent" />
+          )}
+        </div>
+      )}
+      <div className="flex flex-col gap-1">
+        <p className="font-serif text-base font-medium text-foreground">{heading}</p>
+        <p className="text-xs text-muted-foreground max-w-[13rem] leading-relaxed">{sub}</p>
+      </div>
+
+      {!isSearch && !isFavorites && (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="mt-1 h-8 text-xs"
+          onClick={onCreate}
+        >
+          <Plus className="size-3.5" />
+          Create Note
+        </Button>
+      )}
     </div>
   );
 }
 
 function SidebarSkeleton() {
   return (
-    <div className="flex flex-col gap-1 px-1">
-      <p className="px-3 py-3 text-sm text-muted-foreground">Opening notes…</p>
+    <div className="flex flex-col gap-1.5 px-1 py-2">
+      <p className="px-2 text-xs text-muted-foreground font-serif italic">Loading notes…</p>
       {Array.from({ length: 3 }, (_, index) => (
-        <div key={index} className="rounded-md px-3 py-3">
-          <div className="h-4 w-2/3 rounded-sm bg-muted" />
-          <div className="mt-2 h-3 w-full rounded-sm bg-muted/70" />
+        <div key={index} className="rounded-lg border border-border/40 bg-card/60 p-3">
+          <div className="h-4 w-2/3 rounded-sm bg-muted animate-pulse" />
+          <div className="mt-2 h-3 w-full rounded-sm bg-muted/70 animate-pulse" />
         </div>
       ))}
     </div>
@@ -477,31 +640,37 @@ function SettingsPanel() {
   const tagCount = collectTags(notes).size;
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6">
-      <h2 className="mt-2 font-serif text-lg font-medium">Settings</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Your notes are stored locally in this browser.
+    <div className="min-h-0 flex-1 overflow-y-auto px-3.5 pb-6 pt-1">
+      <div className="flex items-center gap-2 mb-1">
+        <Sparkles className="size-4 text-accent" />
+        <h2 className="font-serif text-lg font-medium">Folio Ledger</h2>
+      </div>
+      <p className="text-xs text-muted-foreground leading-relaxed">
+        Offline-first crystal intelligence. Your data never leaves this browser.
       </p>
 
-      <dl className="mt-5 flex flex-col gap-3">
-        <StatRow label="Total notes" value={notes.length} />
-        <StatRow label="Favorites" value={favoriteCount} />
-        <StatRow label="Tags" value={tagCount} />
+      <dl className="mt-4 flex flex-col gap-2">
+        <StatRow label="Stored Notes" value={notes.length} />
+        <StatRow label="Starred" value={favoriteCount} />
+        <StatRow label="Labels" value={tagCount} />
       </dl>
 
-      <div className="mt-6 border-t border-border pt-4">
-        <h3 className="text-sm font-medium">About</h3>
-        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-          Folio is a quiet, local-first notes app. Write in markdown, star
-          your favorites, and organize with tags. Nothing leaves your device.
+      <div className="mt-5 rounded-lg border border-border/60 bg-card p-3 shadow-soft">
+        <h3 className="text-xs font-semibold tracking-wide text-foreground uppercase">
+          Privacy Philosophy
+        </h3>
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+          Folio writes directly to your browser's persistent storage. There are no
+          remote servers tracking your prose.
         </p>
       </div>
 
-      <div className="mt-6 border-t border-border pt-4">
-        <h3 className="text-sm font-medium">Storage</h3>
-        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-          Notes persist in this browser's local storage. Clearing your
-          browser data will remove them.
+      <div className="mt-3 rounded-lg border border-border/60 bg-card/60 p-3">
+        <h3 className="text-xs font-semibold tracking-wide text-foreground uppercase">
+          Storage Health
+        </h3>
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+          Encrypted locally under the key <code className="text-accent font-mono text-[10px]">folio-notes-v1</code>.
         </p>
       </div>
     </div>
@@ -510,9 +679,9 @@ function SettingsPanel() {
 
 function StatRow({ label, value }: { label: string; value: number }) {
   return (
-    <div className="flex items-center justify-between rounded-md bg-card/60 px-3 py-2.5">
-      <dt className="text-sm text-muted-foreground">{label}</dt>
-      <dd className="font-serif text-lg font-medium tabular-nums">{value}</dd>
+    <div className="flex items-center justify-between rounded-lg border border-border/60 bg-card px-3 py-2 shadow-soft">
+      <dt className="text-xs text-muted-foreground font-medium">{label}</dt>
+      <dd className="font-serif text-base font-medium tabular-nums text-foreground">{value}</dd>
     </div>
   );
 }

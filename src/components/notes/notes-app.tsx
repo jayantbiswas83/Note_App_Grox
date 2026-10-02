@@ -20,7 +20,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useNotesHydration } from "@/lib/notes/hydrate";
 import { filterNotes, noteTitle, useNotesStore } from "@/lib/notes/store";
 import { cn, isMacUserAgent } from "@/lib/utils";
@@ -188,13 +193,13 @@ export function NotesApp() {
         <Dialog open={mobileOpen} onOpenChange={setMobileOpen}>
           <DialogContent
             showClose={false}
-            className="data-[state=open]:slide-in-from-left top-0 left-0 flex h-dvh w-80 max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-none border-y-0 border-l-0 p-0 sm:max-w-none"
+            className="data-[state=open]:slide-in-from-left top-0 left-0 flex h-dvh w-[19.5rem] max-w-[85vw] translate-x-0 translate-y-0 flex-col overflow-hidden rounded-none border-y-0 border-l-0 border-r border-border/80 bg-sidebar p-0 shadow-2xl sm:max-w-none"
             onOpenAutoFocus={(event) => {
               event.preventDefault();
               mobileSearchRef.current?.focus();
             }}
           >
-            <DialogTitle className="sr-only">Notes</DialogTitle>
+            <DialogTitle className="sr-only">Notes Ledger</DialogTitle>
             <DialogDescription className="sr-only">
               Search and open your notes
             </DialogDescription>
@@ -207,7 +212,7 @@ export function NotesApp() {
           </DialogContent>
         </Dialog>
 
-        <main className="relative flex min-w-0 flex-1 flex-col">
+        <main className="relative flex min-w-0 flex-1 flex-col bg-background">
           <EditorPane
             editorRef={editorRef}
             modifier={modifier}
@@ -216,51 +221,65 @@ export function NotesApp() {
               if (selectedId) setDeleteOpen(true);
             }}
           />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Keyboard shortcuts"
-            className="absolute right-3 bottom-12 hidden text-muted-foreground md:inline-flex"
-            onClick={() => setHelpOpen(true)}
-          >
-            <Keyboard />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                aria-label="Keyboard shortcuts"
+                className="absolute right-4 bottom-13 hidden size-8 rounded-lg bg-card/80 text-muted-foreground hover:text-foreground md:inline-flex shadow-soft"
+                onClick={() => setHelpOpen(true)}
+              >
+                <Keyboard className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              Shortcuts · ?
+            </TooltipContent>
+          </Tooltip>
         </main>
       </div>
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this note?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="font-serif">Delete this note?</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground leading-relaxed">
               {selected
-                ? `“${noteTitle(selected.body)}” will be removed from this device. This cannot be undone.`
-                : "This note will be removed from this device."}
+                ? `“${noteTitle(selected.body)}” will be permanently removed from this device's storage. This action cannot be undone.`
+                : "This note will be permanently removed from this device."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep</AlertDialogCancel>
+            <AlertDialogCancel>Keep Note</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (selectedId) deleteNote(selectedId);
               }}
             >
-              Delete
+              Delete Note
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Keyboard shortcuts</DialogTitle>
-            <DialogDescription>
-              Use these from anywhere, including the editor.
+            <div className="flex items-center gap-2">
+              <span className="flex size-7 items-center justify-center rounded-md bg-accent-subtle text-accent border border-accent/20">
+                <Keyboard className="size-4" />
+              </span>
+              <DialogTitle className="font-serif text-lg font-medium">Keyboard Shortcuts</DialogTitle>
+            </div>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Hand-crafted shortcuts for fluid, distraction-free writing.
             </DialogDescription>
           </DialogHeader>
-          <ShortcutList modifier={modifier} />
+          <div className="mt-1">
+            <ShortcutList modifier={modifier} />
+          </div>
         </DialogContent>
       </Dialog>
     </TooltipProvider>
@@ -272,27 +291,27 @@ function ShortcutList({ modifier }: { modifier: string }) {
     modifier === "⌘" ? `${modifier}${key}` : `Ctrl+${key}`;
 
   const rows = [
-    [combo("N"), "New note"],
-    [combo("K"), "Search"],
-    ["/", "Search (when not typing)"],
-    [combo("E"), "Toggle preview"],
-    [combo("⇧⌫"), "Delete note"],
-    ["↑ ↓", "Move between notes"],
-    ["Esc", "Clear search or close"],
-    ["?", "Open this panel"],
+    [combo("N"), "Compose new note"],
+    [combo("K"), "Focus search"],
+    ["/", "Search (when not editing)"],
+    [combo("E"), "Toggle markdown preview"],
+    [combo("⇧⌫"), "Delete selected note"],
+    ["↑ ↓", "Navigate note ledger"],
+    ["Esc", "Clear search or close panels"],
+    ["?", "View keyboard shortcuts"],
   ];
 
   return (
-    <ul className="divide-y divide-border">
+    <ul className="divide-y divide-border/60">
       {rows.map(([keys, label]) => (
         <li
           key={label}
-          className="flex items-center justify-between gap-4 py-2.5"
+          className="flex items-center justify-between gap-4 py-2 text-xs"
         >
-          <span className="text-sm">{label}</span>
+          <span className="text-foreground/90 font-medium">{label}</span>
           <span className="flex gap-1">
             {keys.split(" ").map((part) => (
-              <kbd key={part} className="app-kbd">
+              <kbd key={part} className="app-kbd text-[0.6875rem]">
                 {part}
               </kbd>
             ))}
@@ -308,7 +327,7 @@ function CollapsedSidebarWrapper({ children }: { children: React.ReactNode }) {
   return (
     <aside
       className={cn(
-        "hidden shrink-0 border-r border-border md:flex md:flex-col transition-[width] duration-300 ease-smooth",
+        "hidden shrink-0 border-r border-border/70 md:flex md:flex-col transition-[width] duration-300 ease-smooth bg-sidebar",
         collapsed ? "w-16" : "w-72 xl:w-80",
       )}
     >

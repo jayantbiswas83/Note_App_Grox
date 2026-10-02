@@ -140,7 +140,7 @@ export function notePreview(body: string): string {
     .slice(1)
     .join(" ")
     .replace(/^#{1,6}\s+/, "")
-    .replace(/[*_`>#\[\]]/g, "")
+    .replace(/[*_`>#[\]]/g, "")
     .trim();
   if (!rest) return "Empty note";
   return rest.length > 84 ? `${rest.slice(0, 84).trimEnd()}…` : rest;

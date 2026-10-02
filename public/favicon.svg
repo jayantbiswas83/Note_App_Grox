@@ -1,8 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="8" fill="#2F3D48"/>
-  <rect x="8" y="7" width="16" height="18" rx="1.5" fill="#F3EFE6"/>
-  <path d="M19 7v5.5c0 .3.2.5.5.5H25" fill="none" stroke="#2F3D48" stroke-width="1.4"/>
-  <path d="M19 7l6 6h-5.5A.5.5 0 0 1 19 12.5V7z" fill="#D4CCBE"/>
-  <rect x="11" y="16" width="10" height="1.2" rx="0.6" fill="#2F3D48" opacity="0.35"/>
-  <rect x="11" y="19" width="7" height="1.2" rx="0.6" fill="#2F3D48" opacity="0.25"/>
+  <defs>
+    <linearGradient id="favGrad1" x1="6" y1="4" x2="26" y2="28" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stopColor="#8A75F8" />
+      <stop offset="60%" stopColor="#5F47E8" />
+      <stop offset="100%" stopColor="#37269E" />
+    </linearGradient>
+    <linearGradient id="favGrad2" x1="16" y1="4" x2="16" y2="18" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.95" />
+      <stop offset="100%" stopColor="#EDE9FE" stopOpacity="0.5" />
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="8" fill="#FAF8F5" stroke="#E5E0D6" stroke-width="1"/>
+  <!-- Top Diamond Facet -->
+  <path d="M16 4 L25 10 L16 15 L7 10 Z" fill="url(#favGrad2)" stroke="#5F47E8" stroke-width="1" stroke-linejoin="round"/>
+  <!-- Left Pillar -->
+  <path d="M7 10 L16 15 L16 26 L7 19 Z" fill="url(#favGrad1)" stroke="#4C34D3" stroke-width="1" stroke-linejoin="round"/>
+  <!-- Right Facet -->
+  <path d="M16 15 L25 10 L25 18 L16 23 Z" fill="#7C65F6" fill-opacity="0.85" stroke="#5F47E8" stroke-width="1" stroke-linejoin="round"/>
+  <!-- Monogram Bar F -->
+  <path d="M16 14.5 L23 11 L23 14 L16 17.5 Z" fill="#FFFFFF" fill-opacity="0.9"/>
+  <!-- Jewel Vertex -->
+  <circle cx="16" cy="15" r="1.5" fill="#FFFFFF"/>
 </svg>

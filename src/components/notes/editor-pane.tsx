@@ -1,7 +1,7 @@
 import type { RefObject } from "react";
 import { useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
-import { Eye, Menu, PenLine, Trash2, Star, Hash, X } from "lucide-react";
+import { Eye, Menu, PenLine, Trash2, Star, Hash, X, Plus, Sparkles, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -9,6 +9,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { MarkdownPreview } from "@/components/notes/markdown-preview";
+import { FolioCrystalArtwork } from "@/components/notes/folio-crystal-artwork";
+import { FolioBrand } from "@/components/notes/folio-brand";
 import {
   noteTitle,
   useNotesStore,
@@ -37,19 +39,25 @@ export function EditorPane({
   const hasHydrated = useNotesStore((state) => state.hasHydrated);
   const toggleFavorite = useNotesStore((state) => state.toggleFavorite);
   const setNoteTags = useNotesStore((state) => state.setNoteTags);
+  const createNote = useNotesStore((state) => state.createNote);
+
   const note = notes.find((entry) => entry.id === selectedId) ?? null;
 
   if (!hasHydrated) {
     return (
-      <div className="flex h-full flex-col">
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-3">
-          <p className="font-serif text-lg font-medium italic">Folio</p>
+      <div className="flex h-full flex-col bg-background">
+        <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border/70 px-4">
+          <FolioBrand collapsed={true} />
+          <span className="font-serif text-lg font-medium">Folio</span>
         </header>
-        <div className="mx-auto w-full max-w-2xl flex-1 px-6 py-10">
-          <p className="text-sm text-muted-foreground">Opening notes…</p>
-          <div className="mt-6 h-8 w-1/2 rounded-md bg-muted" />
-          <div className="mt-6 h-4 w-full rounded-sm bg-muted/80" />
-          <div className="mt-3 h-4 w-5/6 rounded-sm bg-muted/70" />
+        <div className="mx-auto w-full max-w-3xl flex-1 px-8 py-12">
+          <div className="h-5 w-32 rounded bg-muted animate-pulse" />
+          <div className="mt-8 h-10 w-2/3 rounded-lg bg-muted animate-pulse" />
+          <div className="mt-6 space-y-3">
+            <div className="h-4 w-full rounded bg-muted/80 animate-pulse" />
+            <div className="h-4 w-5/6 rounded bg-muted/70 animate-pulse" />
+            <div className="h-4 w-4/6 rounded bg-muted/60 animate-pulse" />
+          </div>
         </div>
       </div>
     );
@@ -57,51 +65,101 @@ export function EditorPane({
 
   if (!note) {
     return (
-      <div className="flex h-full flex-col">
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-3">
+      <div className="flex h-full flex-col bg-background select-none">
+        {/* Mobile Header */}
+        <header className="flex h-14 shrink-0 items-center justify-between border-b border-border/70 px-4 md:hidden">
           <Button
             type="button"
             size="icon-sm"
             variant="ghost"
-            className="md:hidden"
-            aria-label="Open notes"
+            aria-label="Open sidebar"
             onClick={onOpenSidebar}
           >
-            <Menu />
+            <Menu className="size-5" />
           </Button>
-          <p className="font-serif text-lg font-medium italic">Folio</p>
+          <FolioBrand />
+          <div className="w-8" />
         </header>
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-          <p className="font-serif text-2xl">Nothing selected</p>
-          <p className="max-w-sm text-sm text-muted-foreground">
-            Choose a note from the list, or create one to start writing.
-          </p>
+
+        {/* Empty State: Crystalline Architectural Hero Visual */}
+        <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
+          <FolioCrystalArtwork size="hero" />
+
+          <div className="max-w-md space-y-2">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-accent-subtle/80 px-3 py-1 text-xs font-semibold tracking-wider text-accent border border-accent/20 uppercase">
+              <Sparkles className="size-3" />
+              Crystal Intelligence
+            </div>
+            <h2 className="font-serif text-2xl sm:text-3xl font-medium tracking-tight text-foreground">
+              A Quiet Sanctuary for Thought
+            </h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Your words live locally in this browser — offline-first, distraction-free, and unencumbered.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+            <Button
+              type="button"
+              variant="default"
+              size="default"
+              className="h-10 px-5 gap-2 font-medium shadow-sm shadow-accent/25"
+              onClick={() => {
+                createNote();
+                requestAnimationFrame(() => editorRef.current?.focus());
+              }}
+            >
+              <Plus className="size-4" />
+              Compose New Note
+            </Button>
+          </div>
+
+          {/* Cheatsheet Keycap Badges */}
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1">
+              <kbd className="app-kbd">{modifier === "⌘" ? "⌘N" : "Ctrl+N"}</kbd> New
+            </span>
+            <span className="text-border">•</span>
+            <span className="inline-flex items-center gap-1">
+              <kbd className="app-kbd">{modifier === "⌘" ? "⌘K" : "Ctrl+K"}</kbd> Search
+            </span>
+            <span className="text-border">•</span>
+            <span className="inline-flex items-center gap-1">
+              <kbd className="app-kbd">{modifier === "⌘" ? "⌘E" : "Ctrl+E"}</kbd> Preview
+            </span>
+          </div>
         </div>
       </div>
     );
   }
 
   const words = wordCount(note.body);
+  const readTimeMin = Math.max(1, Math.ceil(words / 200));
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <header className="flex h-14 shrink-0 items-center justify-between gap-3 overflow-hidden border-b border-border px-3 sm:px-5">
-        <div className="flex min-w-0 flex-1 items-center gap-2">
+    <div className="flex h-full min-h-0 flex-col bg-background">
+      {/* Editor Header Toolbar */}
+      <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border/70 px-3.5 sm:px-6 bg-background/80 backdrop-blur-sm">
+        <div className="flex min-w-0 flex-1 items-center gap-2.5">
           <Button
             type="button"
             size="icon-sm"
             variant="ghost"
             className="shrink-0 md:hidden"
-            aria-label="Open notes"
+            aria-label="Open sidebar"
             onClick={onOpenSidebar}
           >
-            <Menu />
+            <Menu className="size-4.5" />
           </Button>
-          <h1 className="min-w-0 flex-1 overflow-hidden text-lg font-medium tracking-tight text-ellipsis whitespace-nowrap font-serif">
+
+          <h1 className="min-w-0 flex-1 overflow-hidden font-serif text-lg font-medium tracking-tight text-foreground truncate">
             {noteTitle(note.body)}
           </h1>
         </div>
-        <div className="flex shrink-0 items-center gap-1">
+
+        {/* Action Controls */}
+        <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
+          {/* Favorite Toggle */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -111,47 +169,58 @@ export function EditorPane({
                 aria-pressed={note.favorite}
                 aria-label={note.favorite ? "Remove from favorites" : "Add to favorites"}
                 onClick={() => toggleFavorite(note.id)}
+                className="size-8.5 rounded-lg"
               >
-                <Star className={cn("size-4", note.favorite && "fill-accent text-accent")} />
+                <Star
+                  className={cn(
+                    "size-4 transition-colors",
+                    note.favorite ? "fill-amber-400 text-amber-500" : "text-muted-foreground",
+                  )}
+                />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Favorite</TooltipContent>
+            <TooltipContent>
+              {note.favorite ? "Remove favorite" : "Star note"}
+            </TooltipContent>
           </Tooltip>
+
+          {/* Preview / Edit Toggle */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 type="button"
-                size="icon-sm"
+                size="sm"
                 variant={previewMode ? "secondary" : "ghost"}
                 aria-pressed={previewMode}
                 aria-label={previewMode ? "Edit markdown" : "Preview markdown"}
                 onClick={() => togglePreview()}
+                className={cn(
+                  "h-8.5 gap-1.5 px-3 rounded-lg text-xs font-medium transition-all",
+                  previewMode
+                    ? "bg-accent-subtle text-accent border border-accent/25 shadow-soft"
+                    : "text-muted-foreground hover:bg-card hover:text-foreground",
+                )}
               >
-                <span className="relative flex size-4 items-center justify-center">
-                  <Eye
-                    className={cn(
-                      "absolute transition-[opacity,transform,filter] duration-200",
-                      previewMode
-                        ? "scale-100 opacity-100 blur-none"
-                        : "scale-[0.25] opacity-0 blur-[4px]",
-                    )}
-                  />
-                  <PenLine
-                    className={cn(
-                      "transition-[opacity,transform,filter] duration-200",
-                      previewMode
-                        ? "scale-[0.25] opacity-0 blur-[4px]"
-                        : "scale-100 opacity-100 blur-none",
-                    )}
-                  />
-                </span>
+                {previewMode ? (
+                  <>
+                    <PenLine className="size-3.5 text-accent" />
+                    <span>Editing</span>
+                  </>
+                ) : (
+                  <>
+                    <Eye className="size-3.5 text-muted-foreground" />
+                    <span>Preview</span>
+                  </>
+                )}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {previewMode ? "Edit" : "Preview"} · {modifier}
+              {previewMode ? "Return to editor" : "Render markdown"} · {modifier}
               {modifier === "⌘" ? "E" : "+E"}
             </TooltipContent>
           </Tooltip>
+
+          {/* Delete Action */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -160,18 +229,23 @@ export function EditorPane({
                 variant="ghost"
                 aria-label="Delete note"
                 onClick={onRequestDelete}
+                className="size-8.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
               >
-                <Trash2 />
+                <Trash2 className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Delete note</TooltipContent>
+            <TooltipContent>
+              Delete note · {modifier}
+              {modifier === "⌘" ? "⇧⌫" : "+Shift+Del"}
+            </TooltipContent>
           </Tooltip>
         </div>
       </header>
 
+      {/* Editor Body or Markdown Preview */}
       <div className="min-h-0 flex-1 overflow-y-auto">
         {previewMode ? (
-          <div className="mx-auto w-full max-w-2xl px-5 py-8 sm:px-8 sm:py-10">
+          <div className="mx-auto w-full max-w-3xl px-6 py-8 sm:px-12 sm:py-12 animate-in fade-in-50 duration-200">
             <MarkdownPreview markdown={note.body} />
           </div>
         ) : (
@@ -179,19 +253,32 @@ export function EditorPane({
         )}
       </div>
 
+      {/* Bottom Label Tag Bar */}
       <TagBar note={note} onSetTags={setNoteTags} />
 
-      <footer className="flex h-10 shrink-0 items-center justify-between gap-3 border-t border-border px-4 text-xs text-muted-foreground">
-        <time
-          dateTime={new Date(note.updatedAt).toISOString()}
-          title={`Created ${format(note.createdAt, "MMM d, yyyy · h:mm a")}`}
-          className="truncate tabular-nums"
-        >
-          Edited {formatDistanceToNow(note.updatedAt, { addSuffix: true })}
-        </time>
-        <span className="shrink-0 tabular-nums">
-          {words} {words === 1 ? "word" : "words"}
-        </span>
+      {/* Bottom Editorial Footer */}
+      <footer className="flex h-10 shrink-0 items-center justify-between gap-3 border-t border-border/70 px-4 sm:px-6 text-xs text-muted-foreground bg-card/40">
+        <div className="flex items-center gap-2">
+          <span className="size-1.5 rounded-full bg-accent/80" title="Active local session" />
+          <time
+            dateTime={new Date(note.updatedAt).toISOString()}
+            title={`Created ${format(note.createdAt, "MMMM d, yyyy 'at' h:mm a")}`}
+            className="truncate tabular-nums font-sans"
+          >
+            Edited {formatDistanceToNow(note.updatedAt, { addSuffix: true })}
+          </time>
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0 tabular-nums">
+          <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-muted-foreground/80">
+            <CheckCircle2 className="size-3 text-accent" />
+            Local-only
+          </span>
+          <span className="text-[11px] font-medium text-foreground/80">
+            {words} {words === 1 ? "word" : "words"}
+            <span className="text-muted-foreground/60 ml-1">· ~{readTimeMin} min read</span>
+          </span>
+        </div>
       </footer>
     </div>
   );
@@ -208,15 +295,15 @@ function NoteEditor({
   const [draft, setDraft] = useState(note.body);
 
   return (
-    <label className="mx-auto flex h-full w-full max-w-2xl px-5 py-6 sm:px-8 sm:py-8">
+    <label className="mx-auto flex h-full w-full max-w-3xl px-6 py-8 sm:px-12 sm:py-10">
       <span className="sr-only">Note content</span>
       <textarea
         ref={editorRef}
         value={draft}
         spellCheck
         aria-label="Note markdown"
-        placeholder="Start writing — the first line becomes the title"
-        className="note-editor h-full min-h-64 w-full resize-none bg-transparent font-serif text-lg leading-relaxed text-foreground outline-none"
+        placeholder="Begin writing — the first line becomes the title…"
+        className="note-editor h-full min-h-72 w-full resize-none bg-transparent font-serif text-lg sm:text-[1.1875rem] leading-[1.8] text-foreground outline-none selection:bg-accent/20"
         onChange={(event) => {
           const next = event.target.value;
           setDraft(next);
@@ -254,20 +341,20 @@ function TagBar({
   }
 
   return (
-    <div className="flex h-9 shrink-0 items-center gap-2 border-t border-border px-4 text-xs">
-      <Hash className="size-3.5 shrink-0 text-muted-foreground" />
-      <div className="flex flex-1 items-center gap-1.5 overflow-x-auto">
+    <div className="flex h-9.5 shrink-0 items-center gap-2 border-t border-border/70 px-4 sm:px-6 text-xs bg-sidebar/50">
+      <Hash className="size-3.5 shrink-0 text-accent/80" />
+      <div className="flex flex-1 items-center gap-1.5 overflow-x-auto py-1">
         {note.tags.map((tag) => (
           <span
             key={tag}
-            className="inline-flex shrink-0 items-center gap-1 rounded-sm bg-muted px-2 py-1 text-muted-foreground"
+            className="inline-flex shrink-0 items-center gap-1 rounded-md bg-accent-subtle/90 px-2 py-0.5 text-xs text-accent border border-accent/20 font-medium"
           >
-            {tag}
+            #{tag}
             <button
               type="button"
               aria-label={`Remove tag ${tag}`}
               onClick={() => removeTag(tag)}
-              className="text-muted-foreground/70 transition-colors hover:text-foreground"
+              className="text-accent/60 transition-colors hover:text-accent"
             >
               <X className="size-3" />
             </button>
@@ -285,8 +372,8 @@ function TagBar({
           }
         }}
         onBlur={addTag}
-        placeholder="Add tag…"
-        className="w-24 shrink-0 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
+        placeholder="Add label…"
+        className="w-24 shrink-0 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground/70"
       />
     </div>
   );
