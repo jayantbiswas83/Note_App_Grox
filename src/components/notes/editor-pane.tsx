@@ -489,6 +489,29 @@ function NoteEditor({
         }}
         onBlur={() => setSlash(null)}
         onKeyDown={(event) => {
+          // ── Editor keyboard shortcuts ─────────────────────────────────────
+          // Scoped to this textarea — no global listener required.
+          const mod = event.ctrlKey || event.metaKey;
+          if (mod) {
+            const shift = event.shiftKey;
+            let action: FormatAction | null = null;
+            if (!shift && event.key === "b") action = "bold";
+            else if (!shift && event.key === "i") action = "italic";
+            else if (!shift && event.key === "`") action = "code";
+            else if (shift && (event.key === "X" || event.key === "x")) action = "strikethrough";
+            else if (shift && event.key === "1") action = "h1";
+            else if (shift && event.key === "2") action = "h2";
+            else if (shift && event.key === "3") action = "h3";
+            else if (shift && event.key === "7") action = "numbered";
+            else if (shift && event.key === "8") action = "bullet";
+            else if (shift && event.key === "9") action = "checklist";
+            if (action) {
+              event.preventDefault();
+              runFormatting(action);
+              return;
+            }
+          }
+          // ── Slash-command menu navigation ─────────────────────────────────
           if (!slash) return;
           if (event.key === "ArrowDown") {
             event.preventDefault();
