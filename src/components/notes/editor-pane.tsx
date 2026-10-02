@@ -29,7 +29,7 @@ import {
   insertLink,
   toggleInline,
 } from "@/lib/notes/markdown-edit";
-import { detectSlashQuery, filterSlashCommands } from "@/lib/notes/slash-commands";
+import { detectSlashQuery, filterSlashCommands, applySlashCommand } from "@/lib/notes/slash-commands";
 import { cn } from "@/lib/utils";
 
 type SlashSession = {
@@ -426,6 +426,23 @@ function NoteEditor({
     };
   }, [slash, draft, editorRef]);
 
+  function commitSlashCommand() {
+    if (!slash) return;
+    const ta = editorRef.current;
+    if (!ta) return;
+    const matches = filterSlashCommands(slash.query);
+    const idx = Math.min(slash.activeIndex, Math.max(0, matches.length - 1));
+    const command = matches[idx];
+    if (!command) {
+      setSlash(null);
+      return;
+    }
+    const caret = ta.selectionStart;
+    const edit = applySlashCommand(draft, caret, slash.slashIndex, command.id);
+    setSlash(null);
+    applyEdit(edit);
+  }
+
   function moveSlashHighlight(direction: 1 | -1) {
     setSlash((prev) => {
       if (!prev) return prev;
@@ -485,6 +502,18 @@ function NoteEditor({
             moveSlashHighlight(-1);
             return;
           }
+          if (event.key === "Enter") {
+            event.preventDefault();
+            event.stopPropagation();
+            commitSlashCommand();
+            return;
+          }
+          if (event.key === "Tab") {
+            event.preventDefault();
+            event.stopPropagation();
+            commitSlashCommand();
+            return;
+          }
           if (event.key === "Escape") {
             event.preventDefault();
             event.stopPropagation();
@@ -500,7 +529,7 @@ function NoteEditor({
           top={slashAnchor.top}
           left={slashAnchor.left}
           onHover={(index) => setSlash((prev) => (prev ? { ...prev, activeIndex: index } : prev))}
-          onSelect={() => setSlash(null)}
+          onSelect={commitSlashCommand}
         />
       ) : null}
     </div>

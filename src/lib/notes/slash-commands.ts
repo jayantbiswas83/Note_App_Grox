@@ -1,7 +1,14 @@
 /**
- * Slash-command catalog and query detection for the Folio textarea.
- * Detection only — applying a command is a later step.
+ * Slash-command catalog, query detection, and command application
+ * for the Folio textarea.
  */
+import type { Edit, Selection } from "@/lib/notes/markdown-edit";
+import {
+  applyLinePrefix,
+  applyListPrefix,
+  insertCodeBlock,
+  insertDivider,
+} from "@/lib/notes/markdown-edit";
 
 export type SlashCommandId =
   | "h1"
@@ -65,4 +72,45 @@ export function filterSlashCommands(query: string): SlashCommand[] {
   const needle = query.toLowerCase();
   if (!needle) return [...SLASH_COMMANDS];
   return SLASH_COMMANDS.filter((command) => command.id.startsWith(needle));
+}
+
+/**
+ * Replace the active slash token (from slashIndex to caret) with the
+ * Markdown syntax for the chosen command and return the resulting Edit.
+ *
+ * Strategy:
+ *   1. Remove the "/query" token to get a clean value + collapsed selection.
+ *   2. Delegate to the existing markdown-edit helpers (same as the toolbar).
+ */
+export function applySlashCommand(
+  value: string,
+  caret: number,
+  slashIndex: number,
+  commandId: SlashCommandId,
+): Edit {
+  // Step 1 — strip the slash token (/query) from the value.
+  const cleaned = value.slice(0, slashIndex) + value.slice(caret);
+  const sel: Selection = { start: slashIndex, end: slashIndex };
+
+  // Step 2 — apply the matching markdown-edit helper.
+  switch (commandId) {
+    case "h1":
+      return applyLinePrefix(cleaned, sel, "# ", /^#\s+/);
+    case "h2":
+      return applyLinePrefix(cleaned, sel, "## ", /^##\s+/);
+    case "h3":
+      return applyLinePrefix(cleaned, sel, "### ", /^###\s+/);
+    case "bullet":
+      return applyListPrefix(cleaned, sel, "-", /^[-*+]\s+/, false);
+    case "number":
+      return applyListPrefix(cleaned, sel, "1.", /^\d+\.\s+/, true);
+    case "todo":
+      return applyLinePrefix(cleaned, sel, "- [ ] ", /^-\s*\[[ xX]\]\s+/);
+    case "quote":
+      return applyLinePrefix(cleaned, sel, "> ", /^>\s+/);
+    case "code":
+      return insertCodeBlock(cleaned, sel);
+    case "divider":
+      return insertDivider(cleaned, sel);
+  }
 }
