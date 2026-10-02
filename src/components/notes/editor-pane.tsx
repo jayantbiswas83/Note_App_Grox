@@ -494,17 +494,18 @@ function NoteEditor({
           const mod = event.ctrlKey || event.metaKey;
           if (mod) {
             const shift = event.shiftKey;
+            const code = event.code;
             let action: FormatAction | null = null;
             if (!shift && event.key === "b") action = "bold";
             else if (!shift && event.key === "i") action = "italic";
-            else if (!shift && event.key === "`") action = "code";
+            else if (!shift && code === "Backquote") action = "code";
             else if (shift && (event.key === "X" || event.key === "x")) action = "strikethrough";
-            else if (shift && event.key === "1") action = "h1";
-            else if (shift && event.key === "2") action = "h2";
-            else if (shift && event.key === "3") action = "h3";
-            else if (shift && event.key === "7") action = "numbered";
-            else if (shift && event.key === "8") action = "bullet";
-            else if (shift && event.key === "9") action = "checklist";
+            else if (shift && code === "Digit1") action = "h1";
+            else if (shift && code === "Digit2") action = "h2";
+            else if (shift && code === "Digit3") action = "h3";
+            else if (shift && code === "Digit7") action = "numbered";
+            else if (shift && code === "Digit8") action = "bullet";
+            else if (shift && code === "Digit9") action = "checklist";
             if (action) {
               event.preventDefault();
               runFormatting(action);
