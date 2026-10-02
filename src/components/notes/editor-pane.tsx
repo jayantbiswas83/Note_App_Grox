@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import { Eye, Menu, PenLine, Trash2, Star, Hash, X, Plus, Sparkles, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/tooltip";
 import { MarkdownPreview } from "@/components/notes/markdown-preview";
 import { FormattingToolbar, type FormatAction } from "@/components/notes/formatting-toolbar";
+import { SlashCommandMenu, measureSlashAnchor } from "@/components/notes/slash-command-menu";
 import { FolioCrystalArtwork } from "@/components/notes/folio-crystal-artwork";
 import { FolioBrand } from "@/components/notes/folio-brand";
 import {
@@ -28,7 +29,14 @@ import {
   insertLink,
   toggleInline,
 } from "@/lib/notes/markdown-edit";
+import { detectSlashQuery, filterSlashCommands } from "@/lib/notes/slash-commands";
 import { cn } from "@/lib/utils";
+
+type SlashSession = {
+  slashIndex: number;
+  query: string;
+  activeIndex: number;
+};
 
 type EditorPaneProps = {
   editorRef: RefObject<HTMLTextAreaElement | null>;
@@ -323,12 +331,30 @@ function NoteEditor({
 }) {
   const updateNote = useNotesStore((state) => state.updateNote);
   const [draft, setDraft] = useState(note.body);
+  const [slash, setSlash] = useState<SlashSession | null>(null);
+  const [slashAnchor, setSlashAnchor] = useState<{ top: number; left: number } | null>(null);
+
+  function syncSlash(value: string, start: number, end: number) {
+    if (start !== end) {
+      setSlash(null);
+      return;
+    }
+    const detected = detectSlashQuery(value, start);
+    setSlash((prev) => {
+      if (!detected) return null;
+      if (prev && prev.slashIndex === detected.slashIndex && prev.query === detected.query) {
+        return prev;
+      }
+      return { ...detected, activeIndex: 0 };
+    });
+  }
 
   function applyEdit(edit: Edit) {
     const ta = editorRef.current;
     if (!ta) return;
     setDraft(edit.value);
     updateNote(note.id, edit.value);
+    syncSlash(edit.value, edit.selection.start, edit.selection.end);
     requestAnimationFrame(() => {
       ta.focus();
       ta.setSelectionRange(edit.selection.start, edit.selection.end);
@@ -378,6 +404,40 @@ function NoteEditor({
 
   onReadyFormatting(runFormatting);
 
+  const slashMatches = slash ? filterSlashCommands(slash.query) : [];
+  const slashActiveIndex =
+    slashMatches.length === 0 ? 0 : Math.min(slash?.activeIndex ?? 0, slashMatches.length - 1);
+
+  useLayoutEffect(() => {
+    if (!slash) {
+      setSlashAnchor(null);
+      return;
+    }
+    const textarea = editorRef.current;
+    if (!textarea) return;
+
+    const update = () => setSlashAnchor(measureSlashAnchor(textarea, slash.slashIndex));
+    update();
+    textarea.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      textarea.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [slash, draft, editorRef]);
+
+  function moveSlashHighlight(direction: 1 | -1) {
+    setSlash((prev) => {
+      if (!prev) return prev;
+      const count = filterSlashCommands(prev.query).length;
+      if (count === 0) return prev;
+      const current = Math.min(prev.activeIndex, count - 1);
+      const next = Math.min(count - 1, Math.max(0, current + direction));
+      if (next === prev.activeIndex) return prev;
+      return { ...prev, activeIndex: next };
+    });
+  }
+
   return (
     <div className="mx-auto flex h-full w-full max-w-3xl flex-col px-6 py-8 sm:px-12 sm:py-10">
       <span className="sr-only">Note content</span>
@@ -386,14 +446,63 @@ function NoteEditor({
         value={draft}
         spellCheck
         aria-label="Note markdown"
+        aria-expanded={slash ? true : undefined}
+        aria-controls={slash ? "folio-slash-listbox" : undefined}
+        aria-autocomplete={slash ? "list" : undefined}
+        aria-activedescendant={
+          slash && slashMatches[slashActiveIndex]
+            ? `folio-slash-${slashMatches[slashActiveIndex].id}`
+            : undefined
+        }
         placeholder="Begin writing — the first line becomes the title…"
         className="note-editor h-full min-h-72 w-full flex-1 resize-none bg-transparent font-serif text-lg sm:text-[1.1875rem] leading-[1.8] text-foreground outline-none selection:bg-accent/20"
         onChange={(event) => {
           const next = event.target.value;
           setDraft(next);
           updateNote(note.id, next);
+          syncSlash(next, event.target.selectionStart, event.target.selectionEnd);
+        }}
+        onSelect={(event) => {
+          const target = event.currentTarget;
+          syncSlash(target.value, target.selectionStart, target.selectionEnd);
+        }}
+        onKeyUp={(event) => {
+          if (event.key === "ArrowUp" || event.key === "ArrowDown" || event.key === "Escape") return;
+          syncSlash(event.currentTarget.value, event.currentTarget.selectionStart, event.currentTarget.selectionEnd);
+        }}
+        onBlur={() => setSlash(null)}
+        onKeyDown={(event) => {
+          if (!slash) return;
+          if (event.key === "ArrowDown") {
+            event.preventDefault();
+            event.stopPropagation();
+            moveSlashHighlight(1);
+            return;
+          }
+          if (event.key === "ArrowUp") {
+            event.preventDefault();
+            event.stopPropagation();
+            moveSlashHighlight(-1);
+            return;
+          }
+          if (event.key === "Escape") {
+            event.preventDefault();
+            event.stopPropagation();
+            setSlash(null);
+          }
         }}
       />
+      {slash && slashAnchor ? (
+        <SlashCommandMenu
+          commands={slashMatches}
+          activeIndex={slashActiveIndex}
+          query={slash.query}
+          top={slashAnchor.top}
+          left={slashAnchor.left}
+          onHover={(index) => setSlash((prev) => (prev ? { ...prev, activeIndex: index } : prev))}
+          onSelect={() => setSlash(null)}
+        />
+      ) : null}
     </div>
   );
 }
