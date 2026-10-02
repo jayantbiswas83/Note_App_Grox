@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import { Eye, Menu, PenLine, Trash2, Star, Hash, X, Plus, Sparkles, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { MarkdownPreview } from "@/components/notes/markdown-preview";
+import { FormattingToolbar, type FormatAction } from "@/components/notes/formatting-toolbar";
 import { FolioCrystalArtwork } from "@/components/notes/folio-crystal-artwork";
 import { FolioBrand } from "@/components/notes/folio-brand";
 import {
@@ -17,6 +18,16 @@ import {
   wordCount,
   type Note,
 } from "@/lib/notes/store";
+import {
+  type Edit,
+  type Selection,
+  applyLinePrefix,
+  applyListPrefix,
+  insertCodeBlock,
+  insertDivider,
+  insertLink,
+  toggleInline,
+} from "@/lib/notes/markdown-edit";
 import { cn } from "@/lib/utils";
 
 type EditorPaneProps = {
@@ -42,6 +53,7 @@ export function EditorPane({
   const createNote = useNotesStore((state) => state.createNote);
 
   const note = notes.find((entry) => entry.id === selectedId) ?? null;
+  const runFormattingRef = useRef<((action: FormatAction) => void) | null>(null);
 
   if (!hasHydrated) {
     return (
@@ -242,6 +254,15 @@ export function EditorPane({
         </div>
       </header>
 
+      {/* Formatting Toolbar — only in edit mode, visually secondary */}
+      {!previewMode && (
+        <div className="flex shrink-0 items-center justify-center border-b border-border/40 bg-background/60 px-3 py-1.5 sm:px-6">
+          <FormattingToolbar
+            onAction={(action) => runFormattingRef.current?.(action)}
+          />
+        </div>
+      )}
+
       {/* Editor Body or Markdown Preview */}
       <div className="min-h-0 flex-1 overflow-y-auto">
         {previewMode ? (
@@ -249,7 +270,14 @@ export function EditorPane({
             <MarkdownPreview markdown={note.body} />
           </div>
         ) : (
-          <NoteEditor key={note.id} note={note} editorRef={editorRef} />
+          <NoteEditor
+            key={note.id}
+            note={note}
+            editorRef={editorRef}
+            onReadyFormatting={(fn) => {
+              runFormattingRef.current = fn;
+            }}
+          />
         )}
       </div>
 
@@ -287,12 +315,68 @@ export function EditorPane({
 function NoteEditor({
   note,
   editorRef,
+  onReadyFormatting,
 }: {
   note: Note;
   editorRef: RefObject<HTMLTextAreaElement | null>;
+  onReadyFormatting: (fn: (action: FormatAction) => void) => void;
 }) {
   const updateNote = useNotesStore((state) => state.updateNote);
   const [draft, setDraft] = useState(note.body);
+
+  function applyEdit(edit: Edit) {
+    const ta = editorRef.current;
+    if (!ta) return;
+    setDraft(edit.value);
+    updateNote(note.id, edit.value);
+    requestAnimationFrame(() => {
+      ta.focus();
+      ta.setSelectionRange(edit.selection.start, edit.selection.end);
+    });
+  }
+
+  function runFormatting(action: FormatAction) {
+    const ta = editorRef.current;
+    if (!ta) return;
+    const value = draft;
+    const sel: Selection = {
+      start: ta.selectionStart ?? 0,
+      end: ta.selectionEnd ?? 0,
+    };
+
+    switch (action) {
+      case "bold":
+        return applyEdit(toggleInline(value, sel, "**"));
+      case "italic":
+        return applyEdit(toggleInline(value, sel, "_"));
+      case "strikethrough":
+        return applyEdit(toggleInline(value, sel, "~~"));
+      case "code":
+        return applyEdit(toggleInline(value, sel, "`"));
+      case "link":
+        return applyEdit(insertLink(value, sel));
+      case "h1":
+        return applyEdit(applyLinePrefix(value, sel, "# ", /^#\s+/));
+      case "h2":
+        return applyEdit(applyLinePrefix(value, sel, "## ", /^##\s+/));
+      case "h3":
+        return applyEdit(applyLinePrefix(value, sel, "### ", /^###\s+/));
+      case "bullet":
+        return applyEdit(applyListPrefix(value, sel, "-", /^[-*+]\s+/, false));
+      case "numbered":
+        return applyEdit(applyListPrefix(value, sel, "1.", /^\d+\.\s+/, true));
+      case "checklist":
+        return applyEdit(applyLinePrefix(value, sel, "- [ ] ", /^-\s*\[[ xX]\]\s+/));
+      case "quote":
+        return applyEdit(applyLinePrefix(value, sel, "> ", /^>\s+/));
+      case "codeblock":
+        return applyEdit(insertCodeBlock(value, sel));
+      case "divider":
+        return applyEdit(insertDivider(value, sel));
+    }
+  }
+
+  onReadyFormatting(runFormatting);
 
   return (
     <div className="mx-auto flex h-full w-full max-w-3xl flex-col px-6 py-8 sm:px-12 sm:py-10">

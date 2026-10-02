@@ -399,3 +399,8 @@ kbd.app-kbd {
     rgba(241, 238, 255, 0.6) 100%
   );
 }
+
+/* Formatting Toolbar */
+.fmt-btn:active:not(:disabled) {
+  transform: scale(0.92);
+}
