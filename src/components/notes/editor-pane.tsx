@@ -295,7 +295,7 @@ function NoteEditor({
   const [draft, setDraft] = useState(note.body);
 
   return (
-    <label className="mx-auto flex h-full w-full max-w-3xl px-6 py-8 sm:px-12 sm:py-10">
+    <div className="mx-auto flex h-full w-full max-w-3xl flex-col px-6 py-8 sm:px-12 sm:py-10">
       <span className="sr-only">Note content</span>
       <textarea
         ref={editorRef}
@@ -303,14 +303,14 @@ function NoteEditor({
         spellCheck
         aria-label="Note markdown"
         placeholder="Begin writing — the first line becomes the title…"
-        className="note-editor h-full min-h-72 w-full resize-none bg-transparent font-serif text-lg sm:text-[1.1875rem] leading-[1.8] text-foreground outline-none selection:bg-accent/20"
+        className="note-editor h-full min-h-72 w-full flex-1 resize-none bg-transparent font-serif text-lg sm:text-[1.1875rem] leading-[1.8] text-foreground outline-none selection:bg-accent/20"
         onChange={(event) => {
           const next = event.target.value;
           setDraft(next);
           updateNote(note.id, next);
         }}
       />
-    </label>
+    </div>
   );
 }
 

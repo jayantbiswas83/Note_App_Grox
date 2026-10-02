@@ -127,6 +127,7 @@
   font-size: 1.1875rem;
   line-height: 1.75;
   letter-spacing: -0.01em;
+  word-spacing: 0.01em;
 }
 
 .md-preview > :first-child {
@@ -137,6 +138,7 @@
   margin-bottom: 0;
 }
 
+/* Headings — editorial hierarchy with crystalline accent */
 .md-preview h1,
 .md-preview h2,
 .md-preview h3,
@@ -144,7 +146,7 @@
   font-weight: 500;
   letter-spacing: -0.025em;
   line-height: 1.25;
-  margin: 1.8em 0 0.5em;
+  margin: 2em 0 0.6em;
   text-wrap: balance;
   color: var(--color-foreground);
 }
@@ -154,6 +156,7 @@
   border-bottom: 1px solid var(--color-border-subtle);
   padding-bottom: 0.35em;
   margin-top: 0.8em;
+  font-weight: 600;
 }
 
 .md-preview h2 {
@@ -162,8 +165,16 @@
 
 .md-preview h3 {
   font-size: 1.3125rem;
+  color: var(--color-foreground);
 }
 
+.md-preview h4 {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--color-muted-foreground);
+}
+
+/* Paragraphs and block elements */
 .md-preview p,
 .md-preview ul,
 .md-preview ol,
@@ -177,13 +188,44 @@
   text-wrap: pretty;
 }
 
+/* Lists — refined spacing and markers */
 .md-preview ul,
 .md-preview ol {
-  padding-left: 1.4em;
+  padding-left: 1.5em;
+}
+
+.md-preview ul {
+  list-style: none;
+}
+
+.md-preview ul > li {
+  position: relative;
+}
+
+.md-preview ul > li::before {
+  content: "";
+  position: absolute;
+  left: -1.1em;
+  top: 0.75em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  opacity: 0.7;
+}
+
+.md-preview ol {
+  list-style: decimal;
+}
+
+.md-preview ol > li::marker {
+  color: var(--color-muted-foreground);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9em;
 }
 
 .md-preview li {
-  margin: 0.3em 0;
+  margin: 0.35em 0;
 }
 
 .md-preview li > ul,
@@ -191,6 +233,22 @@
   margin: 0.2em 0;
 }
 
+/* Task list / checklist */
+.md-preview li:has(> input[type="checkbox"]) {
+  list-style: none;
+  padding-left: 0.25em;
+}
+
+.md-preview li:has(> input[type="checkbox"])::before {
+  display: none;
+}
+
+.md-preview li:has(> input[type="checkbox"]) input[type="checkbox"] {
+  margin-right: 0.5rem;
+  transform: translateY(1px);
+}
+
+/* Links — accent underline */
 .md-preview a {
   color: var(--color-accent);
   text-decoration: underline;
@@ -203,23 +261,30 @@
   color: var(--color-accent-hover);
 }
 
+/* Blockquote — crystalline margin accent */
 .md-preview blockquote {
   border-left: 3px solid var(--color-accent);
   background: color-mix(in oklab, var(--color-accent) 4%, transparent);
   color: var(--color-muted-foreground);
   margin-left: 0;
   margin-right: 0;
-  padding: 0.75rem 1.25rem;
+  padding: 0.85rem 1.4rem;
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   font-style: italic;
 }
 
+.md-preview blockquote p {
+  margin: 0.3em 0;
+}
+
+/* Horizontal rule — subtle divider */
 .md-preview hr {
   border: 0;
   border-top: 1px solid var(--color-border);
   margin: 2.5em 0;
 }
 
+/* Inline code — crystalline chip */
 .md-preview code {
   font-family: var(--font-mono);
   font-size: 0.85em;
@@ -230,17 +295,18 @@
   color: var(--color-accent);
   border: 1px solid var(--color-accent-border);
   border-radius: var(--radius-xs);
-  padding: 0.15em 0.4em;
+  padding: 0.12em 0.4em;
   font-weight: 500;
 }
 
+/* Fenced code blocks — architectural card */
 .md-preview pre {
   background: var(--color-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-soft);
   overflow-x: auto;
-  padding: 1.1rem 1.25rem;
+  padding: 1.15rem 1.3rem;
 }
 
 .md-preview pre code {
@@ -248,7 +314,7 @@
   border: none;
   padding: 0;
   font-size: 0.84rem;
-  line-height: 1.6;
+  line-height: 1.65;
   color: var(--color-foreground);
 }
 
@@ -289,12 +355,21 @@
 
 .note-editor {
   caret-color: var(--color-accent);
+  tab-size: 2;
+  -moz-tab-size: 2;
+  letter-spacing: -0.005em;
+  word-spacing: 0.01em;
 }
 
 .note-editor::placeholder {
   color: var(--color-muted-foreground);
   opacity: 0.55;
   font-style: italic;
+}
+
+/* Editor surface: subtle parchment warmth on focus */
+.note-editor:focus-visible {
+  outline: none;
 }
 
 /* Crystal Keycap Badge */
