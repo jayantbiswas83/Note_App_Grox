@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import { Eye, Menu, PenLine, Trash2, Star, Hash, X, Plus, Sparkles, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -56,10 +56,19 @@ export function EditorPane({
   const previewMode = useNotesStore((state) => state.previewMode);
   const togglePreview = useNotesStore((state) => state.togglePreview);
   const hasHydrated = useNotesStore((state) => state.hasHydrated);
+  const [saveStatus, setSaveStatus] = useState<"saved" | "saving">("saved");
   const toggleFavorite = useNotesStore((state) => state.toggleFavorite);
   const setNoteTags = useNotesStore((state) => state.setNoteTags);
   const createNote = useNotesStore((state) => state.createNote);
+  useEffect(() => {
+    if (saveStatus !== "saving") return;
 
+    const timer = window.setTimeout(() => {
+      setSaveStatus("saved");
+    }, 500);
+
+    return () => window.clearTimeout(timer);
+  }, [saveStatus]);
   const note = notes.find((entry) => entry.id === selectedId) ?? null;
   const runFormattingRef = useRef<((action: FormatAction) => void) | null>(null);
 
@@ -285,6 +294,7 @@ export function EditorPane({
             onReadyFormatting={(fn) => {
               runFormattingRef.current = fn;
             }}
+            onSaveStatusChange={setSaveStatus}
           />
         )}
       </div>
@@ -313,6 +323,9 @@ export function EditorPane({
           <span className="text-[11px] font-medium text-foreground/80">
             {words} {words === 1 ? "word" : "words"}
             <span className="text-muted-foreground/60 ml-1">· ~{readTimeMin} min read</span>
+            <span className="text-muted-foreground/60 ml-3">
+              {saveStatus === "saving" ? "Saving…" : "Saved"}
+            </span>
           </span>
         </div>
       </footer>
@@ -324,10 +337,12 @@ function NoteEditor({
   note,
   editorRef,
   onReadyFormatting,
+  onSaveStatusChange,
 }: {
   note: Note;
   editorRef: RefObject<HTMLTextAreaElement | null>;
   onReadyFormatting: (fn: (action: FormatAction) => void) => void;
+  onSaveStatusChange: (status: "saved" | "saving") => void;
 }) {
   const updateNote = useNotesStore((state) => state.updateNote);
   const [draft, setDraft] = useState(note.body);
@@ -476,6 +491,7 @@ function NoteEditor({
         onChange={(event) => {
           const next = event.target.value;
           setDraft(next);
+          onSaveStatusChange("saving");
           updateNote(note.id, next);
           syncSlash(next, event.target.selectionStart, event.target.selectionEnd);
         }}
