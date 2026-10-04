@@ -110,6 +110,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -130,11 +131,11 @@
   word-spacing: 0.01em;
 }
 
-.md-preview > :first-child {
+.md-preview> :first-child {
   margin-top: 0;
 }
 
-.md-preview > :last-child {
+.md-preview> :last-child {
   margin-bottom: 0;
 }
 
@@ -198,11 +199,11 @@
   list-style: none;
 }
 
-.md-preview ul > li {
+.md-preview ul>li {
   position: relative;
 }
 
-.md-preview ul > li::before {
+.md-preview ul>li::before {
   content: "";
   position: absolute;
   left: -1.1em;
@@ -218,7 +219,7 @@
   list-style: decimal;
 }
 
-.md-preview ol > li::marker {
+.md-preview ol>li::marker {
   color: var(--color-muted-foreground);
   font-variant-numeric: tabular-nums;
   font-size: 0.9em;
@@ -228,8 +229,8 @@
   margin: 0.35em 0;
 }
 
-.md-preview li > ul,
-.md-preview li > ol {
+.md-preview li>ul,
+.md-preview li>ol {
   margin: 0.2em 0;
 }
 
@@ -290,7 +291,7 @@
   font-size: 0.85em;
 }
 
-.md-preview :not(pre) > code {
+.md-preview :not(pre)>code {
   background: var(--color-accent-subtle);
   color: var(--color-accent);
   border: 1px solid var(--color-accent-border);
@@ -393,14 +394,24 @@ kbd.app-kbd {
 
 /* Custom Crystal Utilities */
 .crystal-shimmer {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.9) 0%,
-    rgba(241, 238, 255, 0.6) 100%
-  );
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.9) 0%,
+      rgba(241, 238, 255, 0.6) 100%);
 }
 
 /* Formatting Toolbar */
 .fmt-btn:active:not(:disabled) {
   transform: scale(0.92);
+}
+
+@keyframes floatHint {
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  50% {
+    transform: translateX(3px);
+  }
 }

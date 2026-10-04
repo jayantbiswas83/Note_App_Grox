@@ -5,6 +5,7 @@ import {
   FileText,
   Star,
   Tag,
+  Archive,
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
@@ -46,11 +47,12 @@ const NAV_ITEMS: {
   label: string;
   icon: typeof FileText;
 }[] = [
-  { id: "notes", label: "Notes", icon: FileText },
-  { id: "favorites", label: "Favorites", icon: Star },
-  { id: "tags", label: "Tags", icon: Tag },
-  { id: "settings", label: "Settings", icon: Settings },
-];
+    { id: "notes", label: "Notes", icon: FileText },
+    { id: "favorites", label: "Favorites", icon: Star },
+    { id: "archived", label: "Archived", icon: Archive },
+    { id: "tags", label: "Tags", icon: Tag },
+    { id: "settings", label: "Settings", icon: Settings },
+  ];
 
 export function NoteSidebar({
   searchRef,
@@ -89,7 +91,7 @@ export function NoteSidebar({
     if (view !== "tags") setActiveTag(null);
   }
 
-  const tagCounts = collectTags(notes);
+  const tagCounts = collectTags(notes.filter((note) => !note.archived));
   const sortedTagNames = [...tagCounts.keys()].sort((a, b) =>
     a.localeCompare(b),
   );
@@ -97,8 +99,14 @@ export function NoteSidebar({
   let visible: Note[] = [];
   if (activeView === "favorites") {
     visible = filterNotes(
-      sortedNotes(notes).filter((n) => n.favorite),
+      sortedNotes(notes).filter((n) => n.favorite && !n.archived),
       search,
+    );
+  } else if (activeView === "archived") {
+    visible = filterNotes(
+      sortedNotes(notes).filter((n) => n.archived),
+      search,
+      true,
     );
   } else if (activeView === "tags" && activeTag) {
     visible = filterNotes(
@@ -109,7 +117,8 @@ export function NoteSidebar({
     visible = filterNotes(notes, search);
   }
 
-  const favoriteCount = notes.filter((n) => n.favorite).length;
+  const favoriteCount = notes.filter((n) => n.favorite && !n.archived).length;
+  const archivedCount = notes.filter((n) => n.archived).length;
 
   return (
     <div
@@ -173,18 +182,20 @@ export function NoteSidebar({
 
       {/* Navigation tabs */}
       <nav className="px-2.5 pb-2">
-        <ul className="flex flex-col gap-0.5">
+        <ul className="flex flex-col gap-0.5 max-h-40 overflow-y-auto">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const active = activeView === item.id;
             const count =
               item.id === "notes"
-                ? notes.length
+                ? notes.filter((n) => !n.archived).length
                 : item.id === "favorites"
                   ? favoriteCount
-                  : item.id === "tags"
-                    ? sortedTagNames.length
-                    : undefined;
+                  : item.id === "archived"
+                    ? archivedCount
+                    : item.id === "tags"
+                      ? sortedTagNames.length
+                      : undefined;
 
             if (collapsed) {
               return (
@@ -259,8 +270,11 @@ export function NoteSidebar({
       </nav>
 
       {/* Tag list when in Tags view */}
-      {activeView === "tags" && !collapsed && (
-        <div className="px-3 pb-2 pt-1 border-t border-border/40">
+      {activeView === "tags" && !collapsed && !activeTag && (
+        <div className={cn(
+          "px-3 pt-1 border-t border-border/40",
+          activeTag ? "pb-1" : "pb-2",
+        )}>
           <p className="px-1 pb-1.5 text-[0.6875rem] font-semibold tracking-wider text-muted-foreground uppercase">
             Labels
           </p>
@@ -296,116 +310,158 @@ export function NoteSidebar({
             </ul>
           )}
         </div>
-      )}
+      )
+      }
 
       {/* Search + New Note in Expanded Mode */}
-      {activeView !== "settings" && !collapsed && (
-        <div className="px-3 pb-2.5 pt-1 flex flex-col gap-2">
-          {/* Refined Search Box */}
-          <label className="relative block">
-            <span className="sr-only">Search notes</span>
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              ref={searchRef}
-              type="search"
-              value={search}
-              autoComplete="off"
-              autoCorrect="off"
-              spellCheck={false}
-              placeholder="Search notes…"
-              aria-keyshortcuts="/ Meta+K"
-              onChange={(event) => setSearch(event.target.value)}
-              className="h-9 rounded-lg border-border/70 bg-card/75 pr-14 pl-8.5 text-xs focus:bg-card"
-            />
-            {search ? (
-              <button
-                type="button"
-                onClick={() => setSearch("")}
-                aria-label="Clear search"
-                className="absolute top-1/2 right-2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
-              >
-                <X className="size-3.5" />
-              </button>
-            ) : (
-              <kbd className="app-kbd pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 max-md:hidden text-[0.65rem]">
-                {modifier === "⌘" ? "⌘K" : "Ctrl K"}
-              </kbd>
-            )}
-          </label>
-
-          {/* Primary Create Action */}
-          <Button
-            type="button"
-            variant="default"
-            className="h-9.5 w-full justify-between gap-2 rounded-lg font-medium text-xs tracking-tight"
-            onClick={handleCreate}
-          >
-            <span className="flex items-center gap-1.5">
-              <Plus className="size-4" />
-              Compose Note
-            </span>
-            <kbd className="inline-flex items-center text-[0.65rem] opacity-80 font-mono tracking-wide">
-              {modifier === "⌘" ? "⌘N" : "Ctrl+N"}
-            </kbd>
-          </Button>
-        </div>
-      )}
-
-      {activeView === "settings" && !collapsed ? (
-        <SettingsPanel />
-      ) : (
-        <>
-          {/* Note List Header */}
-          {!collapsed && (
-            <div className="flex items-center justify-between px-3.5 pt-2 pb-1 text-[0.6875rem] font-semibold tracking-wider text-muted-foreground uppercase border-t border-border/40">
-              <span>
-                {activeView === "favorites"
-                  ? "Favorites"
-                  : activeView === "tags" && activeTag
-                    ? `Tag: #${activeTag}`
-                    : "Ledger"}
-              </span>
-              <span className="tabular-nums">
-                {hasHydrated
-                  ? search.trim()
-                    ? `${visible.length} found`
-                    : `${visible.length}`
-                  : ""}
-              </span>
-            </div>
-          )}
-
-          {/* Note list scroll viewport */}
-          <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-4">
-            <div className="flex flex-col gap-1">
-              {!hasHydrated ? (
-                <SidebarSkeleton />
-              ) : activeView === "tags" && !activeTag ? (
-                <TagHint />
-              ) : visible.length === 0 ? (
-                <EmptyList
-                  hasNotes={notes.length > 0}
-                  query={search}
-                  view={activeView}
-                  onCreate={handleCreate}
-                />
+      {
+        activeView !== "settings" && !collapsed && (
+          <div className="px-3 pb-2.5 pt-1 flex flex-col gap-2">
+            {/* Refined Search Box */}
+            <label className="relative block">
+              <span className="sr-only">Search notes</span>
+              <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                ref={searchRef}
+                type="search"
+                value={search}
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                placeholder="Search notes…"
+                aria-keyshortcuts="/ Meta+K"
+                onChange={(event) => setSearch(event.target.value)}
+                className="h-9 rounded-lg border-border/70 bg-card/75 pr-14 pl-8.5 text-xs focus:bg-card"
+              />
+              {search ? (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  aria-label="Clear search"
+                  className="absolute top-1/2 right-2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="size-3.5" />
+                </button>
               ) : (
-                visible.map((note) => (
-                  <NoteRow
-                    key={note.id}
-                    note={note}
-                    selected={note.id === selectedId}
-                    onSelect={handleSelect}
-                    onToggleFavorite={toggleFavorite}
-                    collapsed={collapsed}
-                  />
-                ))
+                <kbd className="app-kbd pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 max-md:hidden text-[0.65rem]">
+                  {modifier === "⌘" ? "⌘K" : "Ctrl K"}
+                </kbd>
               )}
-            </div>
+            </label>
+
+            {/* Primary Create Action */}
+            <Button
+              type="button"
+              variant="default"
+              className="h-9.5 w-full justify-between gap-2 rounded-lg font-medium text-xs tracking-tight"
+              onClick={handleCreate}
+            >
+              <span className="flex items-center gap-1.5">
+                <Plus className="size-4" />
+                Compose Note
+              </span>
+              <kbd className="inline-flex items-center text-[0.65rem] opacity-80 font-mono tracking-wide">
+                {modifier === "⌘" ? "⌘N" : "Ctrl+N"}
+              </kbd>
+            </Button>
           </div>
-        </>
-      )}
-    </div>
+        )
+      }
+
+      {
+        activeView === "settings" && !collapsed ? (
+          <SettingsPanel />
+        ) : (
+          <>
+            {/* Note List Header */}
+            {!collapsed && (
+              <div className="flex items-center justify-between px-3.5 pt-2 pb-1 text-[0.6875rem] font-semibold tracking-wider text-muted-foreground uppercase border-t border-border/40">
+                <div className="flex min-w-0 flex-col gap-0.5">
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <span className="truncate">
+                      {activeView === "favorites"
+                        ? "Favorites"
+                        : activeView === "archived"
+                          ? "Archived"
+                          : activeView === "tags" && activeTag
+                            ? `Tag: #${activeTag}`
+                            : activeView === "tags"
+                              ? "Tags"
+                              : "Ledger"}
+                    </span>
+                  </div>
+                  {activeView === "tags" && activeTag && (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTag(null)}
+                        className="shrink-0 rounded p-0.5 text-accent hover:bg-accent-subtle hover:text-accent"
+                        aria-label="Clear selected tag"
+                      >
+                        <X className="size-3" />
+                      </button>
+                      <span
+                        className="shrink-0 text-sm leading-none animate-[floatHint_1.4s_ease-in-out_infinite]"
+                        aria-hidden="true"
+                      >
+                        👈🏻
+                      </span>
+                      <span className="text-[0.58rem] font-medium text-muted-foreground">
+                        Back to labels
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <span className="tabular-nums">
+                  {hasHydrated
+                    ? activeView === "tags" && !activeTag
+                      ? `${sortedTagNames.length}`
+                      : search.trim()
+                        ? `${visible.length} found`
+                        : `${visible.length}`
+                    : ""}
+                </span>
+              </div>
+            )}
+
+            {/* Note list scroll viewport */}
+            <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-4">
+              <div className="flex flex-col gap-1">
+                {!hasHydrated ? (
+                  <SidebarSkeleton />
+                ) : activeView === "tags" && !activeTag ? (
+                  <TagCollection
+                    tags={sortedTagNames}
+                    tagCounts={tagCounts}
+                    activeTag={activeTag}
+                    onSelectTag={(tag) => setActiveTag(tag)}
+                  />
+                ) : visible.length === 0 ? (
+                  <EmptyList
+                    hasNotes={notes.length > 0}
+                    query={search}
+                    view={activeView}
+                    onCreate={handleCreate}
+                  />
+                ) : (
+                  visible.map((note) => (
+                    <NoteRow
+                      key={note.id}
+                      note={note}
+                      selected={note.id === selectedId}
+                      onSelect={handleSelect}
+                      onToggleFavorite={toggleFavorite}
+                      collapsed={collapsed}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+          </>
+        )
+      }
+    </div >
   );
 }
 
@@ -542,16 +598,59 @@ function NoteRow({
   );
 }
 
-function TagHint() {
+function TagCollection({
+  tags,
+  tagCounts,
+  activeTag,
+  onSelectTag,
+}: {
+  tags: string[];
+  tagCounts: Map<string, number>;
+  activeTag: string | null;
+  onSelectTag: (tag: string) => void;
+}) {
   return (
-    <div className="flex flex-col items-center gap-2 px-4 py-12 text-center select-none">
-      <div className="flex size-10 items-center justify-center rounded-full bg-accent-subtle text-accent border border-accent/20">
-        <Tag className="size-4.5" />
+    <div className="flex flex-col gap-2 px-1 py-2">
+      <div className="px-2 pb-2">
+        <p className="font-serif text-base font-medium text-foreground">
+          Your tags
+        </p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Organize your notes by label.
+        </p>
       </div>
-      <p className="font-serif text-sm font-medium">Select a label</p>
-      <p className="text-xs text-muted-foreground max-w-[12rem]">
-        Choose a label above to filter notes by classification.
-      </p>
+
+      {tags.map((tag) => (
+        <button
+          key={tag}
+          type="button"
+          onClick={() => onSelectTag(tag)}
+          className={cn(
+            "group flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition-all duration-150",
+            activeTag === tag
+              ? "border-accent/30 bg-accent-subtle text-accent shadow-soft"
+              : "border-border/60 bg-card/60 text-foreground hover:border-border hover:bg-card hover:shadow-soft",
+          )}
+        >
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent-subtle text-accent">
+            <Hash className="size-4" />
+          </span>
+
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-medium">
+              {tag}
+            </span>
+            <span className="mt-0.5 block text-[0.6875rem] text-muted-foreground">
+              {tagCounts.get(tag) ?? 0}{" "}
+              {(tagCounts.get(tag) ?? 0) === 1 ? "note" : "notes"}
+            </span>
+          </span>
+
+          <span className="tabular-nums text-xs font-semibold text-muted-foreground">
+            {tagCounts.get(tag) ?? 0}
+          </span>
+        </button>
+      ))}
     </div>
   );
 }
