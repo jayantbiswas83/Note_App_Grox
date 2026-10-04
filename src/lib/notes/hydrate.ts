@@ -32,6 +32,7 @@ function migrateNote(note: Partial<Note>): Note {
     body: note.body ?? "",
     favorite: note.favorite ?? false,
     archived: note.archived ?? false,
+    trashed: note.trashed ?? false,
     tags: note.tags ?? [],
     createdAt: note.createdAt ?? Date.now(),
     updatedAt: note.updatedAt ?? Date.now(),

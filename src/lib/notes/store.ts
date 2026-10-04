@@ -6,6 +6,7 @@ export type Note = {
   body: string;
   favorite: boolean;
   archived: boolean;
+  trashed: boolean;
   tags: string[];
   createdAt: number;
   updatedAt: number;
@@ -36,6 +37,7 @@ type NotesState = {
   setPreviewMode: (previewMode: boolean) => void;
   toggleFavorite: (id: string) => void;
   toggleArchive: (id: string) => void;
+  moveToTrash: (id: string) => void;
   setNoteTags: (id: string, tags: string[]) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   setActiveView: (view: SidebarView) => void;
@@ -166,6 +168,7 @@ function createSeedNotes(now: number): Note[] {
       body: SEED_WELCOME,
       favorite: true,
       archived: false,
+      trashed: false,
       tags: [],
       createdAt: now - 1000 * 60 * 60 * 26,
       updatedAt: now - 1000 * 60 * 12,
@@ -175,6 +178,7 @@ function createSeedNotes(now: number): Note[] {
       body: SEED_MARKDOWN,
       favorite: false,
       archived: false,
+      trashed: false,
       tags: ["reference"],
       createdAt: now - 1000 * 60 * 60 * 30,
       updatedAt: now - 1000 * 60 * 50,
@@ -184,6 +188,7 @@ function createSeedNotes(now: number): Note[] {
       body: SEED_SHORTCUTS,
       favorite: false,
       archived: false,
+      trashed: false,
       tags: ["reference"],
       createdAt: now - 1000 * 60 * 60 * 48,
       updatedAt: now - 1000 * 60 * 80,
@@ -193,6 +198,7 @@ function createSeedNotes(now: number): Note[] {
       body: SEED_IDEAS,
       favorite: true,
       archived: false,
+      trashed: false,
       tags: ["personal", "ideas"],
       createdAt: now - 1000 * 60 * 60 * 12,
       updatedAt: now - 1000 * 60 * 5,
@@ -250,6 +256,7 @@ export const useNotesStore = create<NotesState>()(
           body: "",
           favorite: false,
           archived: false,
+          trashed: false,
           tags: get().activeView === "tags" && get().activeTag ? [get().activeTag as string] : [],
           createdAt: now,
           updatedAt: now,
@@ -304,6 +311,19 @@ export const useNotesStore = create<NotesState>()(
           notes: state.notes.map((note) =>
             note.id === id
               ? { ...note, archived: !note.archived, updatedAt: Date.now() }
+              : note,
+          ),
+        }));
+      },
+      moveToTrash: (id: string) => {
+        set((state) => ({
+          notes: state.notes.map((note) =>
+            note.id === id
+              ? {
+                ...note,
+                trashed: true,
+                updatedAt: Date.now(),
+              }
               : note,
           ),
         }));
