@@ -1,7 +1,7 @@
 import type { RefObject } from "react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
-import { Eye, Menu, PenLine, Trash2, Star, Hash, X, Plus, Sparkles, CheckCircle2 } from "lucide-react";
+import { Eye, Menu, PenLine, Trash2, Archive, Star, Hash, X, Plus, Sparkles, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -58,6 +58,7 @@ export function EditorPane({
   const hasHydrated = useNotesStore((state) => state.hasHydrated);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving">("saved");
   const toggleFavorite = useNotesStore((state) => state.toggleFavorite);
+  const toggleArchive = useNotesStore((state) => state.toggleArchive);
   const setNoteTags = useNotesStore((state) => state.setNoteTags);
   const createNote = useNotesStore((state) => state.createNote);
   useEffect(() => {
@@ -210,6 +211,22 @@ export function EditorPane({
             </TooltipTrigger>
             <TooltipContent>
               {note.favorite ? "Remove favorite" : "Star note"}
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="ghost"
+                aria-label={note.archived ? "Unarchive note" : "Archive note"}
+                onClick={() => toggleArchive(note.id)}
+              >
+                <Archive className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {note.archived ? "Unarchive" : "Archive"}
             </TooltipContent>
           </Tooltip>
 

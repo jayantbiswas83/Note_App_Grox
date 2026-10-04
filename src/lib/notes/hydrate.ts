@@ -31,6 +31,7 @@ function migrateNote(note: Partial<Note>): Note {
     id: note.id ?? crypto.randomUUID(),
     body: note.body ?? "",
     favorite: note.favorite ?? false,
+    archived: note.archived ?? false,
     tags: note.tags ?? [],
     createdAt: note.createdAt ?? Date.now(),
     updatedAt: note.updatedAt ?? Date.now(),
@@ -45,7 +46,7 @@ function finishHydration() {
     const notes = persisted.notes.map(migrateNote);
     const selectedId =
       persisted.selectedId &&
-      notes.some((note) => note.id === persisted.selectedId)
+        notes.some((note) => note.id === persisted.selectedId)
         ? persisted.selectedId
         : (notes[0]?.id ?? null);
     useNotesStore.setState({
@@ -55,8 +56,9 @@ function finishHydration() {
       sidebarCollapsed: Boolean(persisted.sidebarCollapsed),
       activeView:
         persisted.activeView === "favorites" ||
-        persisted.activeView === "tags" ||
-        persisted.activeView === "settings"
+          persisted.activeView === "archived" ||
+          persisted.activeView === "tags" ||
+          persisted.activeView === "settings"
           ? persisted.activeView
           : "notes",
       activeTag: persisted.activeTag ?? null,
