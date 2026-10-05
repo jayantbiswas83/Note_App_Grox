@@ -373,7 +373,7 @@ export function NoteSidebar({
                 Compose Note
               </span>
               <kbd className="inline-flex items-center text-[0.65rem] opacity-80 font-mono tracking-wide">
-                {modifier === "⌘" ? "⌘N" : "Ctrl+N"}
+                {modifier === "⌘" ? "⌘⌥N" : "Ctrl+Alt+N"}
               </kbd>
             </Button>
           </div>

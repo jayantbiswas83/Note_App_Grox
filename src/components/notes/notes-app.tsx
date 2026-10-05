@@ -96,13 +96,12 @@ export function NotesApp() {
           : filterNotes(state.notes, state.search);
       const currentId = state.selectedId;
 
-      if (meta && event.key.toLowerCase() === "n") {
-        event.preventDefault();
-        setMobileOpen(false);
-        setTemplateOpen(true);
-        return;
-      }
-
+      if (meta && event.altKey && event.code === "KeyN") {
+   event.preventDefault();
+  setMobileOpen(false);
+  setTemplateOpen(true);
+  return;
+}
       if (meta && event.key.toLowerCase() === "k") {
         event.preventDefault();
         if (searchOpen) {
@@ -388,7 +387,7 @@ function ShortcutList({ modifier }: { modifier: string }) {
     modifier === "⌘" ? `${modifier}${key}` : `Ctrl+${key}`;
 
   const rows = [
-    [combo("N"), "Compose new note"],
+    [modifier === "⌘" ? "⌘⌥N" : "Ctrl+Alt+N", "Compose new note"],
     [combo("K"), "Focus search"],
     ["/", "Search (when not editing)"],
     [combo("E"), "Toggle markdown preview"],
