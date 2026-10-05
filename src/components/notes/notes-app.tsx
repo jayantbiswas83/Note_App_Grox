@@ -3,6 +3,7 @@ import { Keyboard } from "lucide-react";
 import { NoteSidebar } from "@/components/notes/sidebar";
 import { EditorPane } from "@/components/notes/editor-pane";
 import { CommandPalette, type CommandType } from "@/components/notes/command-palette";
+import { SearchDialog } from "@/components/notes/search-dialog";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -43,6 +44,7 @@ export function NotesApp() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [modifier, setModifier] = useState("Ctrl");
 
   const notes = useNotesStore((state) => state.notes);
@@ -103,7 +105,11 @@ export function NotesApp() {
 
       if (meta && event.key.toLowerCase() === "k") {
         event.preventDefault();
-        useNotesStore.getState().setCommandPaletteOpen(true);
+        if (searchOpen) {
+          setSearchOpen(false);
+        } else {
+          setSearchOpen(true);
+        }
         return;
       }
 
@@ -130,7 +136,7 @@ export function NotesApp() {
 
       if (!typing && event.key === "/") {
         event.preventDefault();
-        focusSearch();
+        setSearchOpen(true);
         return;
       }
 
@@ -182,6 +188,7 @@ export function NotesApp() {
     deleteOpen,
     helpOpen,
     mobileOpen,
+    searchOpen,
     selectNote,
     setSearch,
     togglePreview,
@@ -201,12 +208,7 @@ export function NotesApp() {
         break;
       }
       case "search-notes": {
-        if (isMobileViewport()) {
-          setMobileOpen(true);
-          requestAnimationFrame(() => mobileSearchRef.current?.focus());
-        } else {
-          requestAnimationFrame(() => desktopSearchRef.current?.focus());
-        }
+        setSearchOpen(true);
         break;
       }
       case "toggle-preview": {
@@ -374,6 +376,8 @@ export function NotesApp() {
           handleCommandSelect(command);
         }}
       />
+
+      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
     </TooltipProvider>
   );
 }
