@@ -17,6 +17,7 @@ export type SidebarView =
   | "favorites"
   | "archived"
   | "tags"
+  | "trash"
   | "settings";
 
 type NotesState = {
@@ -216,7 +217,7 @@ export function filterNotes(
   includeArchived = false,
 ): Note[] {
   const sorted = sortedNotes(notes).filter(
-    (note) => includeArchived || !note.archived,
+    (note) => !note.trashed && (includeArchived || !note.archived),
   );
   const q = query.trim().toLowerCase();
   if (!q) return sorted;

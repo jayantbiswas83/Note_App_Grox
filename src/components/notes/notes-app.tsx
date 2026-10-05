@@ -48,6 +48,7 @@ export function NotesApp() {
   const selectedId = useNotesStore((state) => state.selectedId);
   const createNote = useNotesStore((state) => state.createNote);
   const deleteNote = useNotesStore((state) => state.deleteNote);
+  const moveToTrash = useNotesStore((state) => state.moveToTrash);
   const selectNote = useNotesStore((state) => state.selectNote);
   const setSearch = useNotesStore((state) => state.setSearch);
   const togglePreview = useNotesStore((state) => state.togglePreview);
@@ -244,21 +245,21 @@ export function NotesApp() {
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-serif">Delete this note?</AlertDialogTitle>
+            <AlertDialogTitle className="font-serif">Move this note to Trash?</AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground leading-relaxed">
               {selected
-                ? `“${noteTitle(selected.body)}” will be permanently removed from this device's storage. This action cannot be undone.`
-                : "This note will be permanently removed from this device."}
+                ? `“${noteTitle(selected.body)}” will be moved to Trash. You can restore it later.`
+                : "This note will be moved to Trash."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Keep Note</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                if (selectedId) deleteNote(selectedId);
+                if (selectedId) moveToTrash(selectedId);
               }}
             >
-              Delete Note
+              Move to Trash
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
