@@ -41,6 +41,7 @@ type NoteSidebarProps = {
   searchRef: RefObject<HTMLInputElement | null>;
   editorRef: RefObject<HTMLTextAreaElement | null>;
   onNavigate?: () => void;
+  onCompose?: () => void;
   modifier: string;
 };
 
@@ -59,8 +60,8 @@ const NAV_ITEMS: {
 
 export function NoteSidebar({
   searchRef,
-  editorRef,
   onNavigate,
+  onCompose,
   modifier,
 }: NoteSidebarProps) {
   const notes = useNotesStore((state) => state.notes);
@@ -68,7 +69,6 @@ export function NoteSidebar({
   const search = useNotesStore((state) => state.search);
   const setSearch = useNotesStore((state) => state.setSearch);
   const selectNote = useNotesStore((state) => state.selectNote);
-  const createNote = useNotesStore((state) => state.createNote);
   const hasHydrated = useNotesStore((state) => state.hasHydrated);
   const collapsed = useNotesStore((state) => state.sidebarCollapsed);
   const setCollapsed = useNotesStore((state) => state.setSidebarCollapsed);
@@ -79,9 +79,7 @@ export function NoteSidebar({
   const toggleFavorite = useNotesStore((state) => state.toggleFavorite);
 
   function handleCreate() {
-    createNote();
-    onNavigate?.();
-    requestAnimationFrame(() => editorRef.current?.focus());
+    onCompose?.();
   }
 
   function handleSelect(id: string) {

@@ -31,6 +31,7 @@ type NotesState = {
   commandPaletteOpen: boolean;
   hasHydrated: boolean;
   createNote: () => string;
+  createNoteFromTemplate: (body: string) => string;
   deleteNote: (id: string) => void;
   updateNote: (id: string, body: string) => void;
   selectNote: (id: string) => void;
@@ -273,6 +274,26 @@ export const useNotesStore = create<NotesState>()(
           archived: false,
           trashed: false,
           tags: get().activeView === "tags" && get().activeTag ? [get().activeTag as string] : [],
+          createdAt: now,
+          updatedAt: now,
+        };
+        set((state) => ({
+          notes: [note, ...state.notes],
+          selectedId: note.id,
+          search: "",
+          previewMode: false,
+        }));
+        return note.id;
+      },
+      createNoteFromTemplate: (templateBody: string) => {
+        const now = Date.now();
+        const note: Note = {
+          id: crypto.randomUUID(),
+          body: templateBody,
+          favorite: false,
+          archived: false,
+          trashed: false,
+          tags: [],
           createdAt: now,
           updatedAt: now,
         };

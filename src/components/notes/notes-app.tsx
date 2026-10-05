@@ -4,6 +4,7 @@ import { NoteSidebar } from "@/components/notes/sidebar";
 import { EditorPane } from "@/components/notes/editor-pane";
 import { CommandPalette, type CommandType } from "@/components/notes/command-palette";
 import { SearchDialog } from "@/components/notes/search-dialog";
+import { TemplatePicker } from "@/components/notes/template-picker";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -45,12 +46,12 @@ export function NotesApp() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [templateOpen, setTemplateOpen] = useState(false);
   const [modifier, setModifier] = useState("Ctrl");
 
   const notes = useNotesStore((state) => state.notes);
   const selectedId = useNotesStore((state) => state.selectedId);
   const commandPaletteOpen = useNotesStore((state) => state.commandPaletteOpen);
-  const createNote = useNotesStore((state) => state.createNote);
   const toggleFavorite = useNotesStore((state) => state.toggleFavorite);
   const toggleArchive = useNotesStore((state) => state.toggleArchive);
   const moveToTrash = useNotesStore((state) => state.moveToTrash);
@@ -97,9 +98,8 @@ export function NotesApp() {
 
       if (meta && event.key.toLowerCase() === "n") {
         event.preventDefault();
-        createNote();
         setMobileOpen(false);
-        requestAnimationFrame(() => editorRef.current?.focus());
+        setTemplateOpen(true);
         return;
       }
 
@@ -184,7 +184,6 @@ export function NotesApp() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [
-    createNote,
     deleteOpen,
     helpOpen,
     mobileOpen,
@@ -202,9 +201,7 @@ export function NotesApp() {
 
     switch (command) {
       case "new-note": {
-        createNote();
-        setMobileOpen(false);
-        requestAnimationFrame(() => editorRef.current?.focus());
+        setTemplateOpen(true);
         break;
       }
       case "search-notes": {
@@ -263,6 +260,7 @@ export function NotesApp() {
             searchRef={desktopSearchRef}
             editorRef={editorRef}
             modifier={modifier}
+            onCompose={() => setTemplateOpen(true)}
           />
         </CollapsedSidebarWrapper>
 
@@ -284,6 +282,7 @@ export function NotesApp() {
               editorRef={editorRef}
               modifier={modifier}
               onNavigate={() => setMobileOpen(false)}
+              onCompose={() => setTemplateOpen(true)}
             />
           </DialogContent>
         </Dialog>
@@ -378,6 +377,8 @@ export function NotesApp() {
       />
 
       <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+
+      <TemplatePicker open={templateOpen} onOpenChange={setTemplateOpen} />
     </TooltipProvider>
   );
 }
