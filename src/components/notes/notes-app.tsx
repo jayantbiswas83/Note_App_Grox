@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Keyboard } from "lucide-react";
 import { NoteSidebar } from "@/components/notes/sidebar";
 import { EditorPane } from "@/components/notes/editor-pane";
-import { CommandPalette } from "@/components/notes/command-palette";
+import { CommandPalette, type CommandType } from "@/components/notes/command-palette";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -49,11 +49,14 @@ export function NotesApp() {
   const selectedId = useNotesStore((state) => state.selectedId);
   const commandPaletteOpen = useNotesStore((state) => state.commandPaletteOpen);
   const createNote = useNotesStore((state) => state.createNote);
+  const toggleFavorite = useNotesStore((state) => state.toggleFavorite);
+  const toggleArchive = useNotesStore((state) => state.toggleArchive);
   const moveToTrash = useNotesStore((state) => state.moveToTrash);
   const permanentlyDeleteNote = useNotesStore((state) => state.permanentlyDeleteNote);
   const selectNote = useNotesStore((state) => state.selectNote);
   const setSearch = useNotesStore((state) => state.setSearch);
   const togglePreview = useNotesStore((state) => state.togglePreview);
+  const setActiveView = useNotesStore((state) => state.setActiveView);
   const setCommandPaletteOpen = useNotesStore((state) => state.setCommandPaletteOpen);
 
   useEffect(() => {
@@ -187,6 +190,69 @@ export function NotesApp() {
   const selected = notes.find((note) => note.id === selectedId) ?? null;
   const selectedIsTrashed = selected?.trashed ?? false;
 
+  function handleCommandSelect(command: CommandType) {
+    setCommandPaletteOpen(false);
+
+    switch (command) {
+      case "new-note": {
+        createNote();
+        setMobileOpen(false);
+        requestAnimationFrame(() => editorRef.current?.focus());
+        break;
+      }
+      case "search-notes": {
+        if (isMobileViewport()) {
+          setMobileOpen(true);
+          requestAnimationFrame(() => mobileSearchRef.current?.focus());
+        } else {
+          requestAnimationFrame(() => desktopSearchRef.current?.focus());
+        }
+        break;
+      }
+      case "toggle-preview": {
+        togglePreview();
+        break;
+      }
+      case "toggle-favorite": {
+        if (selectedId) toggleFavorite(selectedId);
+        break;
+      }
+      case "archive": {
+        if (selectedId) toggleArchive(selectedId);
+        break;
+      }
+      case "move-to-trash": {
+        if (selectedId) setDeleteOpen(true);
+        break;
+      }
+      case "open-trash": {
+        setActiveView("trash");
+        setMobileOpen(false);
+        break;
+      }
+      case "open-favorites": {
+        setActiveView("favorites");
+        setMobileOpen(false);
+        break;
+      }
+      case "open-archived": {
+        setActiveView("archived");
+        setMobileOpen(false);
+        break;
+      }
+      case "open-tags": {
+        setActiveView("tags");
+        setMobileOpen(false);
+        break;
+      }
+      case "open-settings": {
+        setActiveView("settings");
+        setMobileOpen(false);
+        break;
+      }
+    }
+  }
+
   return (
     <TooltipProvider>
       <div className="flex h-dvh overflow-hidden bg-background text-foreground">
@@ -304,9 +370,8 @@ export function NotesApp() {
       <CommandPalette
         open={commandPaletteOpen}
         onOpenChange={setCommandPaletteOpen}
-        onCommandSelect={() => {
-          // Command execution will be implemented in a separate task
-          setCommandPaletteOpen(false);
+        onCommandSelect={(command) => {
+          handleCommandSelect(command);
         }}
       />
     </TooltipProvider>
