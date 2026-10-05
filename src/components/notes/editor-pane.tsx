@@ -1,7 +1,7 @@
 import type { RefObject } from "react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
-import { Eye, Menu, PenLine, Trash2, Archive, Star, Hash, X, Plus, Sparkles, CheckCircle2 } from "lucide-react";
+import { Eye, Menu, PenLine, Trash2, Archive, Star, Hash, X, Plus, Sparkles, CheckCircle2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -59,6 +59,7 @@ export function EditorPane({
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving">("saved");
   const toggleFavorite = useNotesStore((state) => state.toggleFavorite);
   const toggleArchive = useNotesStore((state) => state.toggleArchive);
+  const restoreFromTrash = useNotesStore((state) => state.restoreFromTrash);
   const setNoteTags = useNotesStore((state) => state.setNoteTags);
   const createNote = useNotesStore((state) => state.createNote);
   useEffect(() => {
@@ -266,6 +267,25 @@ export function EditorPane({
             </TooltipContent>
           </Tooltip>
 
+          {note.trashed && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  aria-label="Restore note"
+                  onClick={() => restoreFromTrash(note.id)}
+                  className="h-8.5 gap-1.5 rounded-lg px-3 text-xs font-medium"
+                >
+                  <RotateCcw className="size-3.5" />
+                  <span className="hidden sm:inline">Restore</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Restore from Trash</TooltipContent>
+            </Tooltip>
+          )}
+
           {/* Delete Action */}
           <Tooltip>
             <TooltipTrigger asChild>
@@ -273,7 +293,7 @@ export function EditorPane({
                 type="button"
                 size="icon-sm"
                 variant="ghost"
-                aria-label="Delete note"
+                aria-label={note.trashed ? "Delete permanently" : "Delete note"}
                 onClick={onRequestDelete}
                 className="size-8.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
               >
@@ -281,7 +301,7 @@ export function EditorPane({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              Delete note · {modifier}
+              {note.trashed ? "Delete permanently" : "Delete note"} · {modifier}
               {modifier === "⌘" ? "⇧⌫" : "+Shift+Del"}
             </TooltipContent>
           </Tooltip>

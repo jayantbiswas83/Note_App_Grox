@@ -59,6 +59,7 @@ function finishHydration() {
         persisted.activeView === "favorites" ||
           persisted.activeView === "archived" ||
           persisted.activeView === "tags" ||
+          persisted.activeView === "trash" ||
           persisted.activeView === "settings"
           ? persisted.activeView
           : "notes",

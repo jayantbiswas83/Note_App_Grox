@@ -27,7 +27,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useNotesHydration } from "@/lib/notes/hydrate";
-import { filterNotes, noteTitle, useNotesStore } from "@/lib/notes/store";
+import { filterNotes, filterTrashedNotes, noteTitle, useNotesStore } from "@/lib/notes/store";
 import { cn, isMacUserAgent } from "@/lib/utils";
 
 function isMobileViewport(): boolean {
@@ -47,8 +47,8 @@ export function NotesApp() {
   const notes = useNotesStore((state) => state.notes);
   const selectedId = useNotesStore((state) => state.selectedId);
   const createNote = useNotesStore((state) => state.createNote);
-  const deleteNote = useNotesStore((state) => state.deleteNote);
   const moveToTrash = useNotesStore((state) => state.moveToTrash);
+  const permanentlyDeleteNote = useNotesStore((state) => state.permanentlyDeleteNote);
   const selectNote = useNotesStore((state) => state.selectNote);
   const setSearch = useNotesStore((state) => state.setSearch);
   const togglePreview = useNotesStore((state) => state.togglePreview);
@@ -81,7 +81,10 @@ export function NotesApp() {
       const meta = event.metaKey || event.ctrlKey;
       const typing = isTypingTarget(event.target);
       const state = useNotesStore.getState();
-      const visible = filterNotes(state.notes, state.search);
+      const visible =
+        state.activeView === "trash"
+          ? filterTrashedNotes(state.notes, state.search)
+          : filterNotes(state.notes, state.search);
       const currentId = state.selectedId;
 
       if (meta && event.key.toLowerCase() === "n") {
@@ -179,6 +182,7 @@ export function NotesApp() {
   ]);
 
   const selected = notes.find((note) => note.id === selectedId) ?? null;
+  const selectedIsTrashed = selected?.trashed ?? false;
 
   return (
     <TooltipProvider>
@@ -245,21 +249,31 @@ export function NotesApp() {
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-serif">Move this note to Trash?</AlertDialogTitle>
+            <AlertDialogTitle className="font-serif">
+              {selectedIsTrashed ? "Delete this note forever?" : "Move this note to Trash?"}
+            </AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground leading-relaxed">
-              {selected
-                ? `“${noteTitle(selected.body)}” will be moved to Trash. You can restore it later.`
-                : "This note will be moved to Trash."}
+              {selectedIsTrashed
+                ? selected
+                  ? `“${noteTitle(selected.body)}” will be permanently deleted. This cannot be undone.`
+                  : "This note will be permanently deleted. This cannot be undone."
+                : selected
+                  ? `“${noteTitle(selected.body)}” will be moved to Trash. You can restore it later.`
+                  : "This note will be moved to Trash."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep Note</AlertDialogCancel>
+            <AlertDialogCancel>
+              {selectedIsTrashed ? "Cancel" : "Keep Note"}
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                if (selectedId) moveToTrash(selectedId);
+                if (!selectedId) return;
+                if (selectedIsTrashed) permanentlyDeleteNote(selectedId);
+                else moveToTrash(selectedId);
               }}
             >
-              Move to Trash
+              {selectedIsTrashed ? "Delete Forever" : "Move to Trash"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -39,6 +39,8 @@ type NotesState = {
   toggleFavorite: (id: string) => void;
   toggleArchive: (id: string) => void;
   moveToTrash: (id: string) => void;
+  restoreFromTrash: (id: string) => void;
+  permanentlyDeleteNote: (id: string) => void;
   setNoteTags: (id: string, tags: string[]) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   setActiveView: (view: SidebarView) => void;
@@ -211,6 +213,15 @@ export function sortedNotes(notes: Note[]): Note[] {
   return [...notes].sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
+function noteMatchesQuery(note: Note, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return (
+    noteTitle(note.body).toLowerCase().includes(q) ||
+    note.body.toLowerCase().includes(q)
+  );
+}
+
 export function filterNotes(
   notes: Note[],
   query: string,
@@ -219,14 +230,14 @@ export function filterNotes(
   const sorted = sortedNotes(notes).filter(
     (note) => !note.trashed && (includeArchived || !note.archived),
   );
-  const q = query.trim().toLowerCase();
-  if (!q) return sorted;
-  return sorted.filter((note) => {
-    return (
-      noteTitle(note.body).toLowerCase().includes(q) ||
-      note.body.toLowerCase().includes(q)
-    );
-  });
+  if (!query.trim()) return sorted;
+  return sorted.filter((note) => noteMatchesQuery(note, query));
+}
+
+export function filterTrashedNotes(notes: Note[], query: string): Note[] {
+  const sorted = sortedNotes(notes).filter((note) => note.trashed);
+  if (!query.trim()) return sorted;
+  return sorted.filter((note) => noteMatchesQuery(note, query));
 }
 
 export function collectTags(notes: Note[]): Map<string, number> {
@@ -328,6 +339,28 @@ export const useNotesStore = create<NotesState>()(
               : note,
           ),
         }));
+      },
+      restoreFromTrash: (id: string) => {
+        set((state) => ({
+          notes: state.notes.map((note) =>
+            note.id === id
+              ? { ...note, trashed: false, updatedAt: Date.now() }
+              : note,
+          ),
+        }));
+      },
+      permanentlyDeleteNote: (id: string) => {
+        set((state) => {
+          const notes = state.notes.filter((note) => note.id !== id);
+          let selectedId = state.selectedId;
+          if (state.selectedId === id) {
+            const ordered = sortedNotes(state.notes).filter((note) => note.trashed);
+            const index = ordered.findIndex((note) => note.id === id);
+            const next = ordered[index + 1] ?? ordered[index - 1];
+            selectedId = next && next.id !== id ? next.id : null;
+          }
+          return { notes, selectedId };
+        });
       },
       setNoteTags: (id, tags) => {
         set((state) => ({

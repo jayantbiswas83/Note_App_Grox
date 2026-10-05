@@ -27,6 +27,7 @@ import { FolioCrystalArtwork } from "@/components/notes/folio-crystal-artwork";
 import {
   collectTags,
   filterNotes,
+  filterTrashedNotes,
   notePreview,
   noteTitle,
   sortedNotes,
@@ -93,7 +94,9 @@ export function NoteSidebar({
     if (view !== "tags") setActiveTag(null);
   }
 
-  const tagCounts = collectTags(notes.filter((note) => !note.archived));
+  const tagCounts = collectTags(
+    notes.filter((note) => !note.archived && !note.trashed),
+  );
   const sortedTagNames = [...tagCounts.keys()].sort((a, b) =>
     a.localeCompare(b),
   );
@@ -101,20 +104,24 @@ export function NoteSidebar({
   let visible: Note[] = [];
   if (activeView === "favorites") {
     visible = filterNotes(
-      sortedNotes(notes).filter((n) => n.favorite && !n.archived),
+      sortedNotes(notes).filter((n) => n.favorite && !n.archived && !n.trashed),
       search,
     );
   } else if (activeView === "archived") {
     visible = filterNotes(
-      sortedNotes(notes).filter((n) => n.archived),
+      sortedNotes(notes).filter((n) => n.archived && !n.trashed),
       search,
       true,
     );
   } else if (activeView === "tags" && activeTag) {
     visible = filterNotes(
-      sortedNotes(notes).filter((n) => n.tags.includes(activeTag)),
+      sortedNotes(notes).filter(
+        (n) => n.tags.includes(activeTag) && !n.trashed,
+      ),
       search,
     );
+  } else if (activeView === "trash") {
+    visible = filterTrashedNotes(notes, search);
   } else {
     visible = filterNotes(notes, search);
   }
@@ -122,7 +129,8 @@ export function NoteSidebar({
   const favoriteCount = notes.filter(
     (n) => n.favorite && !n.archived && !n.trashed,
   ).length;
-  const archivedCount = notes.filter((n) => n.archived).length;
+  const archivedCount = notes.filter((n) => n.archived && !n.trashed).length;
+  const trashCount = notes.filter((n) => n.trashed).length;
 
   return (
     <div
@@ -199,7 +207,9 @@ export function NoteSidebar({
                     ? archivedCount
                     : item.id === "tags"
                       ? sortedTagNames.length
-                      : undefined;
+                      : item.id === "trash"
+                        ? trashCount
+                        : undefined;
 
             if (collapsed) {
               return (
@@ -387,11 +397,13 @@ export function NoteSidebar({
                         ? "Favorites"
                         : activeView === "archived"
                           ? "Archived"
-                          : activeView === "tags" && activeTag
-                            ? `Tag: #${activeTag}`
-                            : activeView === "tags"
-                              ? "Tags"
-                              : "Ledger"}
+                          : activeView === "trash"
+                            ? "Trash"
+                            : activeView === "tags" && activeTag
+                              ? `Tag: #${activeTag}`
+                              : activeView === "tags"
+                                ? "Tags"
+                                : "Ledger"}
                     </span>
                   </div>
                   {activeView === "tags" && activeTag && (
@@ -672,28 +684,39 @@ function EmptyList({
 }) {
   const isSearch = query.trim().length > 0;
   const isFavorites = view === "favorites";
+  const isTrash = view === "trash";
 
-  const heading = isFavorites
-    ? hasNotes
-      ? "No favorite notes"
-      : "No favorites yet"
-    : isSearch
+  const heading = isTrash
+    ? isSearch
       ? "No matches found"
-      : "No notes yet";
+      : "Trash is empty"
+    : isFavorites
+      ? hasNotes
+        ? "No favorite notes"
+        : "No favorites yet"
+      : isSearch
+        ? "No matches found"
+        : "No notes yet";
 
-  const sub = isFavorites
-    ? "Star any note to keep it close at hand."
-    : isSearch
-      ? `Nothing found matching “${query.trim()}”.`
-      : "Begin your first thought or observation.";
+  const sub = isTrash
+    ? isSearch
+      ? `Nothing in Trash matches “${query.trim()}”.`
+      : "Deleted notes stay here until you restore or remove them."
+    : isFavorites
+      ? "Star any note to keep it close at hand."
+      : isSearch
+        ? `Nothing found matching “${query.trim()}”.`
+        : "Begin your first thought or observation.";
 
   return (
     <div className="flex flex-col items-center gap-3 px-4 py-8 text-center select-none">
-      {!hasNotes && !isSearch && !isFavorites ? (
+      {!hasNotes && !isSearch && !isFavorites && !isTrash ? (
         <FolioCrystalArtwork size="sm" />
       ) : (
         <div className="flex size-11 items-center justify-center rounded-xl bg-card border border-border/80 shadow-soft text-accent">
-          {isFavorites ? (
+          {isTrash ? (
+            <Trash2 className="size-5 text-muted-foreground" />
+          ) : isFavorites ? (
             <Star className="size-5 text-amber-500/80" />
           ) : isSearch ? (
             <Search className="size-5 text-muted-foreground" />
@@ -707,7 +730,7 @@ function EmptyList({
         <p className="text-xs text-muted-foreground max-w-[13rem] leading-relaxed">{sub}</p>
       </div>
 
-      {!isSearch && !isFavorites && (
+      {!isSearch && !isFavorites && !isTrash && (
         <Button
           type="button"
           size="sm"
