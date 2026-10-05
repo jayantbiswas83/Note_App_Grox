@@ -28,6 +28,7 @@ type NotesState = {
   sidebarCollapsed: boolean;
   activeView: SidebarView;
   activeTag: string | null;
+  commandPaletteOpen: boolean;
   hasHydrated: boolean;
   createNote: () => string;
   deleteNote: (id: string) => void;
@@ -45,6 +46,7 @@ type NotesState = {
   setSidebarCollapsed: (collapsed: boolean) => void;
   setActiveView: (view: SidebarView) => void;
   setActiveTag: (tag: string | null) => void;
+  setCommandPaletteOpen: (open: boolean) => void;
   loadSeed: () => void;
 };
 
@@ -260,6 +262,7 @@ export const useNotesStore = create<NotesState>()(
       sidebarCollapsed: false,
       activeView: "notes",
       activeTag: null,
+      commandPaletteOpen: false,
       hasHydrated: false,
       createNote: () => {
         const now = Date.now();
@@ -372,6 +375,7 @@ export const useNotesStore = create<NotesState>()(
       setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
       setActiveView: (view) => set({ activeView: view, activeTag: view === "tags" ? get().activeTag : null }),
       setActiveTag: (tag) => set({ activeTag: tag }),
+      setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
       loadSeed: () => {
         if (get().notes.length > 0) return;
         const notes = createSeedNotes(Date.now());

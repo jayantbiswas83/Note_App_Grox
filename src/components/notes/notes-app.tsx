@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Keyboard } from "lucide-react";
 import { NoteSidebar } from "@/components/notes/sidebar";
 import { EditorPane } from "@/components/notes/editor-pane";
+import { CommandPalette } from "@/components/notes/command-palette";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -46,12 +47,14 @@ export function NotesApp() {
 
   const notes = useNotesStore((state) => state.notes);
   const selectedId = useNotesStore((state) => state.selectedId);
+  const commandPaletteOpen = useNotesStore((state) => state.commandPaletteOpen);
   const createNote = useNotesStore((state) => state.createNote);
   const moveToTrash = useNotesStore((state) => state.moveToTrash);
   const permanentlyDeleteNote = useNotesStore((state) => state.permanentlyDeleteNote);
   const selectNote = useNotesStore((state) => state.selectNote);
   const setSearch = useNotesStore((state) => state.setSearch);
   const togglePreview = useNotesStore((state) => state.togglePreview);
+  const setCommandPaletteOpen = useNotesStore((state) => state.setCommandPaletteOpen);
 
   useEffect(() => {
     setModifier(isMacUserAgent(navigator.userAgent) ? "⌘" : "Ctrl");
@@ -97,7 +100,7 @@ export function NotesApp() {
 
       if (meta && event.key.toLowerCase() === "k") {
         event.preventDefault();
-        focusSearch();
+        useNotesStore.getState().setCommandPaletteOpen(true);
         return;
       }
 
@@ -297,6 +300,15 @@ export function NotesApp() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <CommandPalette
+        open={commandPaletteOpen}
+        onOpenChange={setCommandPaletteOpen}
+        onCommandSelect={() => {
+          // Command execution will be implemented in a separate task
+          setCommandPaletteOpen(false);
+        }}
+      />
     </TooltipProvider>
   );
 }
