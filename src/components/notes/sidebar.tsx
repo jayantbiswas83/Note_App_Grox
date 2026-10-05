@@ -6,6 +6,7 @@ import {
   Star,
   Tag,
   Archive,
+  Trash2,
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
@@ -51,6 +52,7 @@ const NAV_ITEMS: {
     { id: "favorites", label: "Favorites", icon: Star },
     { id: "archived", label: "Archived", icon: Archive },
     { id: "tags", label: "Tags", icon: Tag },
+    { id: "trash", label: "Trash", icon: Trash2 },
     { id: "settings", label: "Settings", icon: Settings },
   ];
 
@@ -117,7 +119,9 @@ export function NoteSidebar({
     visible = filterNotes(notes, search);
   }
 
-  const favoriteCount = notes.filter((n) => n.favorite && !n.archived).length;
+  const favoriteCount = notes.filter(
+    (n) => n.favorite && !n.archived && !n.trashed,
+  ).length;
   const archivedCount = notes.filter((n) => n.archived).length;
 
   return (
@@ -188,7 +192,7 @@ export function NoteSidebar({
             const active = activeView === item.id;
             const count =
               item.id === "notes"
-                ? notes.filter((n) => !n.archived).length
+                ? notes.filter((n) => !n.archived && !n.trashed).length
                 : item.id === "favorites"
                   ? favoriteCount
                   : item.id === "archived"
