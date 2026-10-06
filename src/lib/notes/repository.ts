@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { getSql } from "@/lib/db";
+import { withUserTransaction, type ScopedQuery } from "@/lib/db";
 import type { Note } from "./store";
 
 export class NotesUnauthorizedError extends Error {
@@ -129,21 +129,20 @@ function sanitizeCreateInput(note: NoteCreateInput): {
   };
 }
 
+const SELECT_COLUMNS =
+  "id, user_id, body, favorite, archived, trashed, tags, created_at, updated_at";
+
 export async function listNotes(userId: string): Promise<Note[]> {
   const scopedUserId = assertUserId(userId);
 
   try {
-    const sql = await getSql();
-    const rows = await sql.query<DbNoteRow>(
-      `
-        select id, user_id, body, favorite, archived, trashed, tags, created_at, updated_at
-        from public.notes
-        where user_id = $1
-        order by updated_at desc, created_at desc
-      `,
-      [scopedUserId],
-    );
-    return rows.map(rowToNote);
+    return await withUserTransaction(scopedUserId, async (query: ScopedQuery) => {
+      const rows = await query<DbNoteRow>(
+        `select ${SELECT_COLUMNS} from public.notes where user_id = $1 order by updated_at desc, created_at desc`,
+        [scopedUserId],
+      );
+      return rows.map(rowToNote);
+    });
   } catch (error) {
     throw new Error(
       `Failed to list notes for user ${scopedUserId}: ${error instanceof Error ? error.message : String(error)}`,
@@ -156,16 +155,13 @@ export async function getNote(userId: string, noteId: string): Promise<Note | nu
   const scopedNoteId = assertNoteId(noteId);
 
   try {
-    const sql = await getSql();
-    const rows = await sql.query<DbNoteRow>(
-      `
-        select id, user_id, body, favorite, archived, trashed, tags, created_at, updated_at
-        from public.notes
-        where user_id = $1 and id = $2
-      `,
-      [scopedUserId, scopedNoteId],
-    );
-    return rows[0] ? rowToNote(rows[0]) : null;
+    return await withUserTransaction(scopedUserId, async (query: ScopedQuery) => {
+      const rows = await query<DbNoteRow>(
+        `select ${SELECT_COLUMNS} from public.notes where user_id = $1 and id = $2`,
+        [scopedUserId, scopedNoteId],
+      );
+      return rows[0] ? rowToNote(rows[0]) : null;
+    });
   } catch (error) {
     throw new Error(
       `Failed to fetch note ${scopedNoteId}: ${error instanceof Error ? error.message : String(error)}`,
@@ -178,29 +174,20 @@ export async function createNote(userId: string, note: NoteCreateInput): Promise
   const next = sanitizeCreateInput(note);
 
   try {
-    const sql = await getSql();
-    const rows = await sql.query<DbNoteRow>(
-      `
-        insert into public.notes (id, user_id, body, favorite, archived, trashed, tags, created_at, updated_at)
-        values ($1, $2, $3, $4, $5, $6, $7, now(), now())
-        returning id, user_id, body, favorite, archived, trashed, tags, created_at, updated_at
-      `,
-      [
-        next.id,
-        scopedUserId,
-        next.body,
-        next.favorite,
-        next.archived,
-        next.trashed,
-        next.tags,
-      ],
-    );
+    return await withUserTransaction(scopedUserId, async (query: ScopedQuery) => {
+      const rows = await query<DbNoteRow>(
+        `insert into public.notes (id, user_id, body, favorite, archived, trashed, tags, created_at, updated_at)
+         values ($1, $2, $3, $4, $5, $6, $7, now(), now())
+         returning ${SELECT_COLUMNS}`,
+        [next.id, scopedUserId, next.body, next.favorite, next.archived, next.trashed, next.tags],
+      );
 
-    if (!rows[0]) {
-      throw new Error("Note creation returned no row");
-    }
+      if (!rows[0]) {
+        throw new Error("Note creation returned no row");
+      }
 
-    return rowToNote(rows[0]);
+      return rowToNote(rows[0]);
+    });
   } catch (error) {
     throw new Error(
       `Failed to create note for user ${scopedUserId}: ${error instanceof Error ? error.message : String(error)}`,
@@ -216,47 +203,46 @@ export async function updateNote(
   const scopedUserId = assertUserId(userId);
   const scopedNoteId = assertNoteId(noteId);
 
-  const existing = await getNote(scopedUserId, scopedNoteId);
-  if (!existing) {
-    throw new NotesNotFoundError(scopedNoteId);
-  }
-
-  const merged: Note = {
-    ...existing,
-    ...changes,
-    body: typeof changes.body === "string" ? changes.body : existing.body,
-    favorite:
-      typeof changes.favorite === "boolean" ? changes.favorite : existing.favorite,
-    archived:
-      typeof changes.archived === "boolean" ? changes.archived : existing.archived,
-    trashed:
-      typeof changes.trashed === "boolean" ? changes.trashed : existing.trashed,
-    tags: Array.isArray(changes.tags) ? changes.tags : existing.tags,
-    updatedAt: Date.now(),
-  };
-
   try {
-    const sql = await getSql();
-    const rows = await sql.query<DbNoteRow>(
-      `
-        update public.notes
-        set body = $3,
-            favorite = $4,
-            archived = $5,
-            trashed = $6,
-            tags = $7,
-            updated_at = now()
-        where user_id = $1 and id = $2
-        returning id, user_id, body, favorite, archived, trashed, tags, created_at, updated_at
-      `,
-      [scopedUserId, scopedNoteId, merged.body, merged.favorite, merged.archived, merged.trashed, merged.tags],
-    );
+    return await withUserTransaction(scopedUserId, async (query: ScopedQuery) => {
+      // Fetch existing within the same transaction (RLS-enforced).
+      const existingRows = await query<DbNoteRow>(
+        `select ${SELECT_COLUMNS} from public.notes where user_id = $1 and id = $2`,
+        [scopedUserId, scopedNoteId],
+      );
+      const existing = existingRows[0] ? rowToNote(existingRows[0]) : null;
+      if (!existing) {
+        throw new NotesNotFoundError(scopedNoteId);
+      }
 
-    if (!rows[0]) {
-      throw new NotesNotFoundError(scopedNoteId);
-    }
+      const merged: Note = {
+        ...existing,
+        ...changes,
+        body: typeof changes.body === "string" ? changes.body : existing.body,
+        favorite:
+          typeof changes.favorite === "boolean" ? changes.favorite : existing.favorite,
+        archived:
+          typeof changes.archived === "boolean" ? changes.archived : existing.archived,
+        trashed:
+          typeof changes.trashed === "boolean" ? changes.trashed : existing.trashed,
+        tags: Array.isArray(changes.tags) ? changes.tags : existing.tags,
+        updatedAt: Date.now(),
+      };
 
-    return rowToNote(rows[0]);
+      const rows = await query<DbNoteRow>(
+        `update public.notes
+         set body = $3, favorite = $4, archived = $5, trashed = $6, tags = $7, updated_at = now()
+         where user_id = $1 and id = $2
+         returning ${SELECT_COLUMNS}`,
+        [scopedUserId, scopedNoteId, merged.body, merged.favorite, merged.archived, merged.trashed, merged.tags],
+      );
+
+      if (!rows[0]) {
+        throw new NotesNotFoundError(scopedNoteId);
+      }
+
+      return rowToNote(rows[0]);
+    });
   } catch (error) {
     if (error instanceof NotesNotFoundError) {
       throw error;
@@ -272,16 +258,13 @@ export async function deleteNote(userId: string, noteId: string): Promise<boolea
   const scopedNoteId = assertNoteId(noteId);
 
   try {
-    const sql = await getSql();
-    const rows = await sql.query<{ id: string }>(
-      `
-        delete from public.notes
-        where user_id = $1 and id = $2
-        returning id
-      `,
-      [scopedUserId, scopedNoteId],
-    );
-    return rows.length > 0;
+    return await withUserTransaction(scopedUserId, async (query: ScopedQuery) => {
+      const rows = await query<{ id: string }>(
+        `delete from public.notes where user_id = $1 and id = $2 returning id`,
+        [scopedUserId, scopedNoteId],
+      );
+      return rows.length > 0;
+    });
   } catch (error) {
     throw new Error(
       `Failed to delete note ${scopedNoteId}: ${error instanceof Error ? error.message : String(error)}`,

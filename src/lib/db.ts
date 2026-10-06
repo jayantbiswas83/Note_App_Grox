@@ -94,6 +94,8 @@ function createNeonSql(): Promise<Sql> {
     types.setTypeParser(OID_DATE, identity);
     types.setTypeParser(OID_INTERVAL, identity);
     const pool = new Pool({ connectionString: databaseUrl });
+    // Expose the pool for withUserTransaction (same instance, not a second one).
+    (globalRef as typeof globalRef & { __pgPool__?: import("pg").Pool }).__pgPool__ = pool;
     return toSql(async <T>(text: string, params: unknown[]) => {
       const res = await pool.query(text, params);
       return res.rows as T[];
@@ -192,6 +194,97 @@ export function getSql(): Promise<Sql> {
     throw err;
   });
   return sqlPromise;
+}
+
+/**
+ * A scoped query function that runs a single SQL statement with parameterized
+ * values and returns rows. Handed to the callback in {@link withUserTransaction}
+ * so all queries in the transaction use the same checked-out client.
+ */
+export type ScopedQuery = <T = Record<string, unknown>>(
+  text: string,
+  params?: unknown[],
+) => Promise<T[]>;
+
+/**
+ * Run a callback inside a user-scoped transaction that sets the JWT claims and
+ * `authenticated` role for RLS enforcement on PostgreSQL (Neon).
+ *
+ * On **Neon** (`DATABASE_URL` set):
+ * 1. Check out one client from the shared `pg.Pool`.
+ * 2. `BEGIN`
+ * 3. `select set_config('request.jwt.claims', $1, true)` — transaction-local,
+ *    parameterized (never string-interpolated).
+ * 4. `SET LOCAL ROLE authenticated`
+ * 5. Execute all queries via the callback using that SAME client.
+ * 6. `COMMIT`
+ * 7. Release the client.
+ *
+ * On failure: `ROLLBACK` → release → rethrow. The claims and role never escape
+ * the transaction — `set_config(..., true)` is transaction-scoped and
+ * `SET LOCAL` is transaction-scoped, so the next pool checkout is clean.
+ *
+ * On **PGLite** (no `DATABASE_URL`): runs the callback against the shared
+ * in-memory instance with no RLS/role switching — PGLite is single-connection
+ * and local-only, so the application-layer `user_id` filtering in the
+ * repository is the sole access control. Better Auth queries never go through
+ * this path.
+ */
+export async function withUserTransaction<T>(
+  userId: string,
+  fn: (query: ScopedQuery) => Promise<T>,
+): Promise<T> {
+  if (dbSource !== "neon") {
+    // PGLite: no RLS, no role switching — use the shared client.
+    const sql = await getSql();
+    return fn(sql.query.bind(sql) as ScopedQuery);
+  }
+
+  // PostgreSQL: check out a dedicated client for this transaction.
+  const pool = await getNeonPool();
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+    // Parameterized set_config — never interpolate the JSON or user id.
+    const claims = JSON.stringify({ sub: userId });
+    await client.query("select set_config('request.jwt.claims', $1, true)", [
+      claims,
+    ]);
+    await client.query("SET LOCAL ROLE authenticated");
+
+    const scopedQuery: ScopedQuery = <T>(
+      text: string,
+      params: unknown[] = [],
+    ): Promise<T[]> => client.query(text, params as never[]).then((res) => res.rows as T[]);
+
+    const result = await fn(scopedQuery);
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    try {
+      await client.query("ROLLBACK");
+    } catch {
+      // rollback failure is secondary to the original error
+    }
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Get the raw `pg.Pool` instance for Neon (server-only). Used by
+ * `withUserTransaction` to check out a dedicated client per transaction.
+ * This is the SAME pool created by `createNeonSql` — not a second one.
+ */
+async function getNeonPool(): Promise<import("pg").Pool> {
+  await getSql(); // ensure the pool is initialized
+  const ref = globalRef as typeof globalRef & { __pgPool__?: import("pg").Pool };
+  if (!ref.__pgPool__) {
+    throw new Error("Neon pool not initialized");
+  }
+  return ref.__pgPool__;
 }
 
 /**
