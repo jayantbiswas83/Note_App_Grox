@@ -1,5 +1,29 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import {
+  createServerNote,
+  deleteServerNote,
+  serverPersistenceActive,
+  updateServerNote,
+} from "./server-sync";
+
+// Debounced server body-update: the editor fires `updateNote` on every
+// keystroke, so we coalesce rapid edits into one server call per note. The
+// 800ms delay matches typical autosave cadence — long enough to batch typing
+// bursts, short enough to feel instant.
+const UPDATE_DEBOUNCE_MS = 800;
+const pendingBodyUpdates = new Map<string, ReturnType<typeof setTimeout>>();
+
+function scheduleServerBodyUpdate(noteId: string, body: string): void {
+  if (!serverPersistenceActive) return;
+  const existing = pendingBodyUpdates.get(noteId);
+  if (existing) clearTimeout(existing);
+  const timer = setTimeout(() => {
+    pendingBodyUpdates.delete(noteId);
+    void updateServerNote(noteId, { body });
+  }, UPDATE_DEBOUNCE_MS);
+  pendingBodyUpdates.set(noteId, timer);
+}
 
 export type Note = {
   id: string;
@@ -283,6 +307,7 @@ export const useNotesStore = create<NotesState>()(
           search: "",
           previewMode: false,
         }));
+        void createServerNote(note);
         return note.id;
       },
       createNoteFromTemplate: (templateBody: string) => {
@@ -303,6 +328,7 @@ export const useNotesStore = create<NotesState>()(
           search: "",
           previewMode: false,
         }));
+        void createServerNote(note);
         return note.id;
       },
       deleteNote: (id) => {
@@ -317,6 +343,7 @@ export const useNotesStore = create<NotesState>()(
           }
           return { notes, selectedId };
         });
+        void deleteServerNote(id);
       },
       updateNote: (id, body) => {
         const now = Date.now();
@@ -327,6 +354,7 @@ export const useNotesStore = create<NotesState>()(
             return { ...note, body, updatedAt: now };
           }),
         }));
+        scheduleServerBodyUpdate(id, body);
       },
       selectNote: (id) => {
         if (get().selectedId === id) return;
@@ -336,13 +364,16 @@ export const useNotesStore = create<NotesState>()(
       togglePreview: () => set((state) => ({ previewMode: !state.previewMode })),
       setPreviewMode: (previewMode) => set({ previewMode }),
       toggleFavorite: (id) => {
+        const note = get().notes.find((n) => n.id === id);
         set((state) => ({
           notes: state.notes.map((note) =>
             note.id === id ? { ...note, favorite: !note.favorite, updatedAt: Date.now() } : note,
           ),
         }));
+        if (note) void updateServerNote(id, { favorite: !note.favorite });
       },
       toggleArchive: (id: string) => {
+        const note = get().notes.find((n) => n.id === id);
         set((state) => ({
           notes: state.notes.map((note) =>
             note.id === id
@@ -350,6 +381,7 @@ export const useNotesStore = create<NotesState>()(
               : note,
           ),
         }));
+        if (note) void updateServerNote(id, { archived: !note.archived });
       },
       moveToTrash: (id: string) => {
         set((state) => ({
@@ -363,6 +395,7 @@ export const useNotesStore = create<NotesState>()(
               : note,
           ),
         }));
+        void updateServerNote(id, { trashed: true });
       },
       restoreFromTrash: (id: string) => {
         set((state) => ({
@@ -372,6 +405,7 @@ export const useNotesStore = create<NotesState>()(
               : note,
           ),
         }));
+        void updateServerNote(id, { trashed: false });
       },
       permanentlyDeleteNote: (id: string) => {
         set((state) => {
@@ -385,6 +419,7 @@ export const useNotesStore = create<NotesState>()(
           }
           return { notes, selectedId };
         });
+        void deleteServerNote(id);
       },
       setNoteTags: (id, tags) => {
         set((state) => ({
@@ -392,6 +427,7 @@ export const useNotesStore = create<NotesState>()(
             note.id === id ? { ...note, tags: tags, updatedAt: Date.now() } : note,
           ),
         }));
+        void updateServerNote(id, { tags });
       },
       setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
       setActiveView: (view) => set({ activeView: view, activeTag: view === "tags" ? get().activeTag : null }),
@@ -407,14 +443,23 @@ export const useNotesStore = create<NotesState>()(
       name: "folio-notes-v1",
       skipHydration: true,
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        notes: state.notes,
-        selectedId: state.selectedId,
-        previewMode: state.previewMode,
-        sidebarCollapsed: state.sidebarCollapsed,
-        activeView: state.activeView,
-        activeTag: state.activeTag,
-      }),
+      partialize: (state) =>
+        serverPersistenceActive
+          ? {
+              selectedId: state.selectedId,
+              previewMode: state.previewMode,
+              sidebarCollapsed: state.sidebarCollapsed,
+              activeView: state.activeView,
+              activeTag: state.activeTag,
+            }
+          : {
+              notes: state.notes,
+              selectedId: state.selectedId,
+              previewMode: state.previewMode,
+              sidebarCollapsed: state.sidebarCollapsed,
+              activeView: state.activeView,
+              activeTag: state.activeTag,
+            },
     },
   ),
 );
