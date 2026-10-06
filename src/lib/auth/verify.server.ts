@@ -26,6 +26,18 @@ if (databaseConfigured && !authConfigured) {
   );
 }
 
+if (databaseConfigured && authConfigured) {
+  const missing = [];
+  if (!process.env.BETTER_AUTH_SECRET?.trim()) missing.push("BETTER_AUTH_SECRET");
+  if (!process.env.BETTER_AUTH_URL?.trim()) missing.push("BETTER_AUTH_URL");
+  if (missing.length > 0) {
+    throw new Error(
+      `[auth] DATABASE_URL is set and auth is enabled, but required environment variable(s) are missing: ${missing.join(", ")}. ` +
+        "These must be set for production authentication.",
+    );
+  }
+}
+
 /** Dev fallback user id, used only when auth is disabled (VITE_AUTH_ENABLED=false). */
 export const DEV_USER_ID = "dev-user";
 
