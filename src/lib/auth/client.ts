@@ -1,7 +1,5 @@
-import { genericOAuthClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 import { runPreSignInSignOut, runSignOut } from "../../../scripts/sign-out-plan.mjs";
-import { GROK_PROVIDERS } from "./providers";
 
 /**
  * Better Auth client for this React SPA (browser-side).
@@ -18,8 +16,7 @@ import { GROK_PROVIDERS } from "./providers";
  * the visitor stays signed in.
  */
 export const authClient = createAuthClient({
-  plugins: [genericOAuthClient()],
-  fetchOptions: {
+    fetchOptions: {
     onRequest(ctx) {
       const token = getBearerToken();
       if (token) ctx.headers.set("Authorization", `Bearer ${token}`);
@@ -38,7 +35,6 @@ export const authClient = createAuthClient({
 export const authEnabled = import.meta.env.VITE_AUTH_ENABLED !== "false";
 
 /** The upstream providers to render sign-in buttons for. */
-export { GROK_PROVIDERS };
 
 // ── Live-preview bearer token ────────────────────────────────────────────────
 // The embedded preview iframe has partitioned cookies, so we keep the session's
@@ -113,12 +109,7 @@ export async function signIn(
   // would leave it hanging — but bounded PER ENVIRONMENT: only the server can
   // end a deployed session, so cutting it short at the preview's 1.5s would
   // start OAuth with the old session still live.
-  await runPreSignInSignOut({
-    livePreview: inLivePreview(),
-    hasBearer: Boolean(getBearerToken()),
-    requestSignOut: () => authClient.signOut(),
-    clearToken: () => setBearerToken(null),
-  });
+
 
   if (inLivePreview()) {
     if (!popup) throw new Error("Pop-up blocked — allow pop-ups for sign-in");
@@ -143,15 +134,15 @@ export async function signIn(
     return;
   }
 
-  const { data, error } = await authClient.signIn.oauth2({
-    providerId,
-    callbackURL,
-    errorCallbackURL,
-  });
-  if (error) throw new Error(error.message ?? "Sign-in failed");
-  if (data?.url) window.location.href = data.url;
-}
+  const { data, error } = await authClient.signIn.social({
+  provider: providerId === "grok-google" ? "google" : providerId,
+  callbackURL,
+  errorCallbackURL,
+});
 
+if (error) throw new Error(error.message ?? "Sign-in failed");
+if (data?.url) window.location.href = data.url;
+}
 /**
  * Open `/auth/popup` in a new window. Must run synchronously inside the click
  * handler (no await before this). The path is served by the template Vite
