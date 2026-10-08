@@ -112,10 +112,7 @@ function sanitizeCreateInput(note: NoteCreateInput): {
   updatedAt: number;
 } {
   const body = typeof note.body === "string" ? note.body : "";
-  if (!body) {
-    throw new NotesValidationError("Note body is required");
-  }
-
+  
   const timestamp = Date.now();
   return {
     id: note.id?.trim() || randomUUID(),

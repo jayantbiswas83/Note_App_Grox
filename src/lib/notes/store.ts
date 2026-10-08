@@ -307,7 +307,14 @@ export const useNotesStore = create<NotesState>()(
           search: "",
           previewMode: false,
         }));
-        void createServerNote(note);
+        void createServerNote(note).then((serverNote) => {
+  if (serverPersistenceActive && !serverNote) {
+    set((state) => ({
+      notes: state.notes.filter((existingNote) => existingNote.id !== note.id),
+      selectedId: state.selectedId === note.id ? null : state.selectedId,
+    }));
+  }
+});
         return note.id;
       },
       createNoteFromTemplate: (templateBody: string) => {
@@ -328,7 +335,14 @@ export const useNotesStore = create<NotesState>()(
           search: "",
           previewMode: false,
         }));
-        void createServerNote(note);
+        void createServerNote(note).then((serverNote) => {
+  if (serverPersistenceActive && !serverNote) {
+    set((state) => ({
+      notes: state.notes.filter((existingNote) => existingNote.id !== note.id),
+      selectedId: state.selectedId === note.id ? null : state.selectedId,
+    }));
+  }
+});
         return note.id;
       },
       deleteNote: (id) => {
